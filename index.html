@@ -269,6 +269,11 @@
             <input id="filterIncomeNote" type="text" placeholder="Keyword" class="w-full border p-2 rounded text-white" oninput="renderIncomeEntries()" />
           </div>
         </div>
+        <!-- Batch Actions -->
+        <div id="incomeBatchActions" class="hidden flex gap-2 items-center">
+          <button onclick="deleteSelectedIncome()" class="btn-delete text-sm px-3 py-1 rounded">Delete Selected</button>
+          <button id="markPaidBtn" onclick="markSelectedPaid()" class="btn-secondary text-sm px-3 py-1 rounded">Mark Selected as Paid</button>
+        </div>
         <!-- Income List Container -->
         <div id="incomeList" class="card p-4 rounded shadow"></div>
       </div>
@@ -299,6 +304,10 @@
             <input id="filterExpenseNote" type="text" placeholder="Keyword" class="w-full border p-2 rounded text-white" oninput="renderExpenseEntries()" />
           </div>
         </div>
+        <!-- Batch Actions -->
+        <div id="expenseBatchActions" class="hidden flex gap-2 items-center">
+          <button onclick="deleteSelectedExpense()" class="btn-delete text-sm px-3 py-1 rounded">Delete Selected</button>
+        </div>
         <!-- Expense List Container -->
         <div id="expenseList" class="card p-4 rounded shadow"></div>
       </div>
@@ -310,7 +319,7 @@
     <div class="card p-6 rounded-xl w-[90%] max-w-md space-y-4 relative">
       <!-- Close icon -->
       <button onclick="closeEditModal()" class="absolute top-2 right-2 text-gray-400 hover:text-white text-xl leading-none">&times;</button>
-      <h2 class="text-lg font-semibold">Modify Entry</h2>
+      <h2 class="text-lg font-semibold">Modify Income</h2>
       <select id="editCategory" class="w-full border p-2 rounded text-white"></select>
       <input id="editAmount" type="number" placeholder="Amount" class="w-full border p-2 rounded text-white" />
       <input id="editDate" type="date" class="w-full border p-2 rounded text-white" />
@@ -321,6 +330,31 @@
       <div class="flex justify-between">
         <button onclick="closeEditModal()" class="text-danger">Cancel</button>
         <button onclick="saveEditEntry()" class="btn-secondary px-4 py-1 rounded text-white">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modify Expense Modal -->
+  <div id="editExpModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-30">
+    <div class="card p-6 rounded-xl w-[90%] max-w-md space-y-4 relative">
+      <!-- Close icon -->
+      <button onclick="closeEditExpModal()" class="absolute top-2 right-2 text-gray-400 hover:text-white text-xl leading-none">&times;</button>
+      <h2 class="text-lg font-semibold">Modify Expense</h2>
+      <select id="editExpCategory" class="w-full border p-2 rounded text-white"></select>
+      <input id="editExpAmount" type="number" placeholder="Amount" class="w-full border p-2 rounded text-white" />
+      <input id="editExpDate" type="date" class="w-full border p-2 rounded text-white" />
+      <select id="editExpPaidBy" class="w-full border p-2 rounded text-white">
+        <option value="Cash">Cash</option>
+        <option value="Bofa">Bofa</option>
+        <option value="Zolve">Zolve</option>
+        <option value="Other">Other</option>
+        <option value="Hali">Hali</option>
+        <option value="Disha">Disha</option>
+      </select>
+      <input id="editExpNote" type="text" placeholder="Note (optional)" class="w-full border p-2 rounded text-white" />
+      <div class="flex justify-between">
+        <button onclick="closeEditExpModal()" class="text-danger">Cancel</button>
+        <button onclick="saveEditExpEntry()" class="btn-secondary px-4 py-1 rounded text-white">Save</button>
       </div>
     </div>
   </div>
@@ -341,7 +375,12 @@
     let currentView = 'daily';
     let currentFocus;
     let editIndex = null;
+    let editExpIndex = null;
     let fileHandle = null;
+
+    // For batch selection
+    let selectedIncomeIndices = new Set();
+    let selectedExpenseIndices = new Set();
 
     // Car icons per category
     const INCOME_CARS = {
@@ -359,25 +398,32 @@
       "Other": "🗂️"
     };
 
-    function initFocus() {
-      const today = new Date();
-      currentFocus = today.toISOString().slice(0, 10);
-    }
-    initFocus();
-
     // ----------------------------------------------------------------
-    // 2) UTILITIES: PARSE DATE STRING AS LOCAL
+    // 2) HELPER: PARSE/FORMAT LOCAL DATE
     // ----------------------------------------------------------------
     function parseDateLocal(isoString) {
-      // isoString: "YYYY-MM-DD"
+      // "YYYY-MM-DD" → Date(y, m-1, d) in local timezone
       const [y, m, d] = isoString.split('-').map(Number);
       return new Date(y, m - 1, d);
     }
+    function toYYYYMMDD(dateObj) {
+      // Date object in local → "YYYY-MM-DD"
+      const y = dateObj.getFullYear();
+      const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const d = String(dateObj.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
     function formatDate(isoString) {
-      // Display "Wednesday, Jun 2, 2025" using local date
+      // Display e.g. "Wednesday, Jun 4, 2025"
       const d = parseDateLocal(isoString);
       return d.toLocaleDateString("en-US", { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' });
     }
+
+    function initFocus() {
+      const today = new Date();
+      currentFocus = toYYYYMMDD(today);
+    }
+    initFocus();
 
     // ----------------------------------------------------------------
     // 3) FILE SYSTEM ACCESS API: OPEN / CREATE / READ / WRITE
@@ -514,7 +560,7 @@
     }
 
     // ----------------------------------------------------------------
-    // 5) INCOME: CRUD + RENDERING
+    // 5) INCOME: CRUD + BATCH + RENDERING
     // ----------------------------------------------------------------
 
     function renderCategoryList() {
@@ -628,7 +674,7 @@
     }
 
     function renderForm(cat) {
-      const today = new Date().toISOString().split("T")[0];
+      const today = toYYYYMMDD(new Date());
       return `
         <div class="space-y-2">
           <input id="amt-${cat}" type="number" placeholder="Amount" class="w-full border p-2 rounded text-white" />
@@ -662,7 +708,7 @@
     }
 
     // ----------------------------------------------------------------
-    // 6) EXPENSE: CRUD + RENDERING
+    // 6) EXPENSE: CRUD + BATCH + RENDERING
     // ----------------------------------------------------------------
 
     function saveExpense(category, amount, date, paidBy, note) {
@@ -693,7 +739,7 @@
     }
 
     function renderExpForm(cat) {
-      const today = new Date().toISOString().split("T")[0];
+      const today = toYYYYMMDD(new Date());
       return `
         <div class="space-y-2">
           <input id="expAmt-${cat}" type="number" placeholder="Amount" class="w-full border p-2 rounded text-white" />
@@ -802,13 +848,13 @@
       currentView = view;
       const now = new Date();
       if (view === 'daily') {
-        currentFocus = now.toISOString().slice(0, 10);
+        currentFocus = toYYYYMMDD(now);
       } else if (view === 'weekly') {
-        // Compute local week start
-        const dt = new Date();
+        // Compute local week start (Sunday)
+        const dt = new Date(now);
         const day = dt.getDay();
         dt.setDate(dt.getDate() - day);
-        currentFocus = dt.toISOString().slice(0, 10);
+        currentFocus = toYYYYMMDD(dt);
       } else {
         currentFocus = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
       }
@@ -821,6 +867,9 @@
       document.getElementById("monthlySumBtn").classList.toggle("btn-secondary", view === "monthly");
       document.getElementById("monthlySumBtn").classList.toggle("bg-gray-700", view !== "monthly");
       document.getElementById("monthlySumBtn").classList.toggle("text-gray-300", view !== "monthly");
+      // Reset batch selections
+      selectedIncomeIndices.clear();
+      selectedExpenseIndices.clear();
       renderFilters();
       renderIncomeEntries();
       renderExpenseEntries();
@@ -831,11 +880,11 @@
       if (currentView === 'daily') {
         const dt = parseDateLocal(currentFocus);
         dt.setDate(dt.getDate() + offset);
-        currentFocus = dt.toISOString().slice(0, 10);
+        currentFocus = toYYYYMMDD(dt);
       } else if (currentView === 'weekly') {
         const dt = parseDateLocal(currentFocus);
         dt.setDate(dt.getDate() + offset * 7);
-        currentFocus = dt.toISOString().slice(0, 10);
+        currentFocus = toYYYYMMDD(dt);
       } else {
         const [y, m] = currentFocus.split('-').map(Number);
         let newMonth = m - 1 + offset;
@@ -844,6 +893,9 @@
         if (newMonth > 11) { newMonth = 0; newYear++; }
         currentFocus = `${newYear}-${String(newMonth + 1).padStart(2, "0")}`;
       }
+      // Reset batch selections
+      selectedIncomeIndices.clear();
+      selectedExpenseIndices.clear();
       renderIncomeEntries();
       renderExpenseEntries();
       renderSummary();
@@ -860,6 +912,9 @@
       EXP_CATEGORIES.forEach(cat => {
         fExpCat.innerHTML += `<option value="${cat}">${cat}</option>`;
       });
+      // Reset batch action visibility
+      document.getElementById("incomeBatchActions").classList.add("hidden");
+      document.getElementById("expenseBatchActions").classList.add("hidden");
     }
 
     function renderIncomeEntries() {
@@ -868,7 +923,7 @@
       const paidFilter = document.getElementById("filterIncomePaid").value;
       const noteFilter = document.getElementById("filterIncomeNote").value.toLowerCase();
 
-      let filtered = entries.filter(e => {
+      let filtered = entries.filter((e, idx) => {
         const d = parseDateLocal(e.date);
         let matchDate = false;
         if (view === 'daily') {
@@ -893,6 +948,15 @@
       const container = document.getElementById("incomeList");
       container.innerHTML = "";
 
+      // Show batch actions if any entries loaded
+      if (filtered.length) {
+        document.getElementById("incomeBatchActions").classList.remove("hidden");
+        // Show/Hide "Mark Selected as Paid" only if filter is "Unpaid"
+        document.getElementById("markPaidBtn").style.display = (paidFilter === "Unpaid") ? "inline-block" : "none";
+      } else {
+        document.getElementById("incomeBatchActions").classList.add("hidden");
+      }
+
       if (!filtered.length) {
         container.innerHTML = `<div class="text-center text-muted">No income entries.</div>`;
         return;
@@ -903,11 +967,15 @@
         filtered.forEach(e => {
           const idx = entries.findIndex(x => x === e);
           const paidIcon = e.paid ? "✅" : "🕒";
+          const checked = selectedIncomeIndices.has(idx) ? 'checked' : '';
           container.innerHTML += `
-            <div class="flex justify-between items-center border-b py-2">
-              <div>
-                <strong>#${idx + 1}</strong> ${e.category} – $${e.amount.toFixed(2)} ${paidIcon}
-                ${e.note ? `<div class="text-muted text-xs">📝 ${e.note}</div>` : ""}
+            <div class="flex items-center justify-between border-b py-2">
+              <div class="flex items-center space-x-2">
+                <input type="checkbox" onchange="toggleIncomeSelect(${idx}, this.checked)" ${checked} />
+                <div>
+                  <strong>#${idx + 1}</strong> ${e.category} – $${e.amount.toFixed(2)} ${paidIcon}
+                  ${e.note ? `<div class="text-muted text-xs">📝 ${e.note}</div>` : ""}
+                </div>
               </div>
               <button onclick="openEditModal(${idx})" class="text-primary text-xs hover:text-white">Modify</button>
             </div>`;
@@ -929,11 +997,15 @@
                 ${dayEntries.map(e => {
                   const idx = entries.findIndex(x => x === e);
                   const paidIcon = e.paid ? "✅" : "🕒";
+                  const checked = selectedIncomeIndices.has(idx) ? 'checked' : '';
                   return `
-                    <div class="flex justify-between items-center border-b py-1">
-                      <div>
-                        <strong>#${idx + 1}</strong> ${e.category} – $${e.amount.toFixed(2)} ${paidIcon}
-                        ${e.note ? `<div class="text-muted text-xs">📝 ${e.note}</div>` : ""}
+                    <div class="flex items-center justify-between border-b py-1">
+                      <div class="flex items-center space-x-2">
+                        <input type="checkbox" onchange="toggleIncomeSelect(${idx}, this.checked)" ${checked} />
+                        <div>
+                          <strong>#${idx + 1}</strong> ${e.category} – $${e.amount.toFixed(2)} ${paidIcon}
+                          ${e.note ? `<div class="text-muted text-xs">📝 ${e.note}</div>` : ""}
+                        </div>
                       </div>
                       <button onclick="openEditModal(${idx})" class="text-primary text-xs hover:text-white">Modify</button>
                     </div>`;
@@ -959,11 +1031,15 @@
               ${weekEntries.map(e => {
                 const idx = entries.findIndex(x => x === e);
                 const paidIcon = e.paid ? "✅" : "🕒";
+                const checked = selectedIncomeIndices.has(idx) ? 'checked' : '';
                 return `
-                  <div class="flex justify-between items-center border-b py-1">
-                    <div>
-                      <strong>#${idx + 1}</strong> ${e.category} – $${e.amount.toFixed(2)} ${paidIcon}
-                      ${e.note ? `<div class="text-muted text-xs">📝 ${e.note}</div>` : ""}
+                  <div class="flex items-center justify-between border-b py-1">
+                    <div class="flex items-center space-x-2">
+                      <input type="checkbox" onchange="toggleIncomeSelect(${idx}, this.checked)" ${checked} />
+                      <div>
+                        <strong>#${idx + 1}</strong> ${e.category} – $${e.amount.toFixed(2)} ${paidIcon}
+                        ${e.note ? `<div class="text-muted text-xs">📝 ${e.note}</div>` : ""}
+                      </div>
                     </div>
                     <button onclick="openEditModal(${idx})" class="text-primary text-xs hover:text-white">Modify</button>
                   </div>`;
@@ -971,6 +1047,41 @@
             </div>`;
         });
       }
+    }
+
+    function toggleIncomeSelect(index, isChecked) {
+      if (isChecked) {
+        selectedIncomeIndices.add(index);
+      } else {
+        selectedIncomeIndices.delete(index);
+      }
+    }
+
+    function deleteSelectedIncome() {
+      if (!selectedIncomeIndices.size) return alert("No entries selected.");
+      if (!confirm("Delete selected income entries?")) return;
+      // Convert Set to array, sort descending
+      const toDelete = Array.from(selectedIncomeIndices).sort((a,b) => b - a);
+      toDelete.forEach(idx => {
+        entries.splice(idx, 1);
+      });
+      selectedIncomeIndices.clear();
+      writeDataFile();
+      renderBars();
+      renderIncomeEntries();
+      renderSummary();
+    }
+
+    function markSelectedPaid() {
+      if (!selectedIncomeIndices.size) return alert("No entries selected.");
+      selectedIncomeIndices.forEach(idx => {
+        if (entries[idx]) entries[idx].paid = true;
+      });
+      selectedIncomeIndices.clear();
+      writeDataFile();
+      renderBars();
+      renderIncomeEntries();
+      renderSummary();
     }
 
     function renderExpenseEntries() {
@@ -1003,6 +1114,13 @@
       const container = document.getElementById("expenseList");
       container.innerHTML = "";
 
+      // Show batch actions if any entries loaded
+      if (filtered.length) {
+        document.getElementById("expenseBatchActions").classList.remove("hidden");
+      } else {
+        document.getElementById("expenseBatchActions").classList.add("hidden");
+      }
+
       if (!filtered.length) {
         container.innerHTML = `<div class="text-center text-muted">No expense entries.</div>`;
         return;
@@ -1012,12 +1130,17 @@
         filtered.sort((a,b) => parseDateLocal(b.date) - parseDateLocal(a.date));
         filtered.forEach(e => {
           const idx = entriesExp.findIndex(x => x === e);
+          const checked = selectedExpenseIndices.has(idx) ? 'checked' : '';
           container.innerHTML += `
-            <div class="flex justify-between items-center border-b py-2">
-              <div>
-                <strong>#${idx + 1}</strong> ${e.category} – $${e.amount.toFixed(2)} (Paid by: ${e.paidBy})
-                ${e.note ? `<div class="text-muted text-xs">📝 ${e.note}</div>` : ""}
+            <div class="flex items-center justify-between border-b py-2">
+              <div class="flex items-center space-x-2">
+                <input type="checkbox" onchange="toggleExpenseSelect(${idx}, this.checked)" ${checked} />
+                <div>
+                  <strong>#${idx + 1}</strong> ${e.category} – $${e.amount.toFixed(2)} (Paid by: ${e.paidBy})
+                  ${e.note ? `<div class="text-muted text-xs">📝 ${e.note}</div>` : ""}
+                </div>
               </div>
+              <button onclick="openEditExpModal(${idx})" class="text-primary text-xs hover:text-white">Modify</button>
             </div>`;
         });
       } else if (view === 'weekly') {
@@ -1036,12 +1159,17 @@
                 <h4 class="font-medium">${formatDate(dayKey)} – Total: $${dayTotal}</h4>
                 ${dayEntries.map(e => {
                   const idx = entriesExp.findIndex(x => x === e);
+                  const checked = selectedExpenseIndices.has(idx) ? 'checked' : '';
                   return `
-                    <div class="flex justify-between items-center border-b py-1">
-                      <div>
-                        <strong>#${idx + 1}</strong> ${e.category} – $${e.amount.toFixed(2)} (Paid by: ${e.paidBy})
-                        ${e.note ? `<div class="text-muted text-xs">📝 ${e.note}</div>` : ""}
+                    <div class="flex items-center justify-between border-b py-1">
+                      <div class="flex items-center space-x-2">
+                        <input type="checkbox" onchange="toggleExpenseSelect(${idx}, this.checked)" ${checked} />
+                        <div>
+                          <strong>#${idx + 1}</strong> ${e.category} – $${e.amount.toFixed(2)} (Paid by: ${e.paidBy})
+                          ${e.note ? `<div class="text-muted text-xs">📝 ${e.note}</div>` : ""}
+                        </div>
                       </div>
+                      <button onclick="openEditExpModal(${idx})" class="text-primary text-xs hover:text-white">Modify</button>
                     </div>`;
                 }).join('')}
               </div>`;
@@ -1064,17 +1192,44 @@
               <h4 class="font-medium">${wkKey} – Total: $${weekTotal}</h4>
               ${weekEntries.map(e => {
                 const idx = entriesExp.findIndex(x => x === e);
+                const checked = selectedExpenseIndices.has(idx) ? 'checked' : '';
                 return `
-                  <div class="flex justify-between items-center border-b py-1">
-                    <div>
-                      <strong>#${idx + 1}</strong> ${e.category} – $${e.amount.toFixed(2)} (Paid by: ${e.paidBy})
-                      ${e.note ? `<div class="text-muted text-xs">📝 ${e.note}</div>` : ""}
+                  <div class="flex items-center justify-between border-b py-1">
+                    <div class="flex items-center space-x-2">
+                      <input type="checkbox" onchange="toggleExpenseSelect(${idx}, this.checked)" ${checked} />
+                      <div>
+                        <strong>#${idx + 1}</strong> ${e.category} – $${e.amount.toFixed(2)} (Paid by: ${e.paidBy})
+                        ${e.note ? `<div class="text-muted text-xs">📝 ${e.note}</div>` : ""}
+                      </div>
                     </div>
+                    <button onclick="openEditExpModal(${idx})" class="text-primary text-xs hover:text-white">Modify</button>
                   </div>`;
               }).join('')}
             </div>`;
         });
       }
+    }
+
+    function toggleExpenseSelect(index, isChecked) {
+      if (isChecked) {
+        selectedExpenseIndices.add(index);
+      } else {
+        selectedExpenseIndices.delete(index);
+      }
+    }
+
+    function deleteSelectedExpense() {
+      if (!selectedExpenseIndices.size) return alert("No entries selected.");
+      if (!confirm("Delete selected expense entries?")) return;
+      const toDelete = Array.from(selectedExpenseIndices).sort((a,b) => b - a);
+      toDelete.forEach(idx => {
+        entriesExp.splice(idx, 1);
+      });
+      selectedExpenseIndices.clear();
+      writeDataFile();
+      renderExpenseBars();
+      renderExpenseEntries();
+      renderSummary();
     }
 
     function renderSummary() {
@@ -1099,7 +1254,7 @@
           const d = parseDateLocal(e.date);
           return d >= ws && d <= we;
         });
-        label.textContent = `Week: ${formatDate(currentFocus)} – ${formatDate(we.toISOString().slice(0,10))}`;
+        label.textContent = `Week: ${formatDate(currentFocus)} – ${formatDate(toYYYYMMDD(we))}`;
       } else {
         const [y, m] = currentFocus.split('-').map(Number);
         incomeList = entries.filter(e => {
@@ -1191,6 +1346,43 @@
       renderSummary();
     }
 
+    // ----------------------------------------------------------------
+    // 10) EDIT MODAL LOGIC (EXPENSE ONLY)
+    // ----------------------------------------------------------------
+
+    function openEditExpModal(index) {
+      const entry = entriesExp[index];
+      editExpIndex = index;
+      const catOptions = EXP_CATEGORIES.map(c =>
+        `<option ${entry.category === c ? "selected" : ""}>${c}</option>`
+      ).join("");
+      document.getElementById("editExpCategory").innerHTML = catOptions;
+      document.getElementById("editExpAmount").value = entry.amount;
+      document.getElementById("editExpDate").value = entry.date;
+      document.getElementById("editExpPaidBy").value = entry.paidBy;
+      document.getElementById("editExpNote").value = entry.note || "";
+      document.getElementById("editExpModal").classList.remove("hidden");
+    }
+
+    function closeEditExpModal() {
+      document.getElementById("editExpModal").classList.add("hidden");
+      editExpIndex = null;
+    }
+
+    function saveEditExpEntry() {
+      if (editExpIndex === null) return;
+      entriesExp[editExpIndex].category = document.getElementById("editExpCategory").value;
+      entriesExp[editExpIndex].amount = parseFloat(document.getElementById("editExpAmount").value);
+      entriesExp[editExpIndex].date = document.getElementById("editExpDate").value;
+      entriesExp[editExpIndex].paidBy = document.getElementById("editExpPaidBy").value;
+      entriesExp[editExpIndex].note = document.getElementById("editExpNote").value;
+      writeDataFile();
+      closeEditExpModal();
+      renderExpenseBars();
+      renderExpenseEntries();
+      renderSummary();
+    }
+
     function showTab(tab) {
       document.getElementById("tabContentIncome").classList.toggle("hidden", tab !== 'income');
       document.getElementById("tabContentExpense").classList.toggle("hidden", tab !== 'expense');
@@ -1198,12 +1390,15 @@
       document.getElementById("tabIncome").classList.toggle("border-secondary", tab === 'income');
       document.getElementById("tabExpense").classList.toggle("text-primary", tab === 'expense');
       document.getElementById("tabExpense").classList.toggle("border-transparent", tab !== 'expense');
+      // Reset batch selections
+      selectedIncomeIndices.clear();
+      selectedExpenseIndices.clear();
       renderIncomeEntries();
       renderExpenseEntries();
     }
 
     // ----------------------------------------------------------------
-    // 10) INITIALIZE
+    // 11) INITIALIZE
     // ----------------------------------------------------------------
 
     window.addEventListener("DOMContentLoaded", () => {
