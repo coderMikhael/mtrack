@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#111827" />
+  <title>Money Tracker (Neon Cars)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Gamified Dark Theme */
+    :root {
+      --color-bg: #111827;         /* Dark Indigo-900 */
+      --color-surface: #1f2937;    /* Dark Gray-800 */
+      --color-text: #f9fafb;       /* Gray-50 */
+      --color-primary: #0ea5e9;    /* Neon Blue */
+      --color-secondary: #22c55e;  /* Neon Green */
+      --color-accent: #f472b6;     /* Neon Pink */
+      --color-muted: #6b7280;      /* Gray-500 */
+      --color-danger: #ef4444;     /* Red-500 */
+    }
+    body {
+      background-color: var(--color-bg);
+      color: var(--color-text);
+    }
+    /* Button Variants */
+    .btn-primary {
+      background-color: var(--color-primary);
+      color: white;
+      box-shadow: 0 0 8px var(--color-primary), 0 0 16px var(--color-primary), inset 0 0 6px var(--color-primary);
+    }
+    .btn-secondary {
+      background-color: var(--color-secondary);
+      color: white;
+      box-shadow: 0 0 8px var(--color-secondary), 0 0 16px var(--color-secondary), inset 0 0 6px var(--color-secondary);
+    }
+    .btn-accent {
+      background-color: var(--color-accent);
+      color: white;
+      box-shadow: 0 0 8px var(--color-accent), 0 0 16px var(--color-accent), inset 0 0 6px var(--color-accent);
+    }
+    .btn-delete {
+      color: var(--color-danger);
+    }
+    /* Bars: neon glow */
+    .bar-income {
+      background-color: var(--color-secondary);
+      box-shadow: 0 0 8px var(--color-secondary), 0 0 16px var(--color-secondary), inset 0 0 6px var(--color-secondary);
+      height: 100%;
+      border-radius: 0.25rem;
+    }
+    .bar-income-overflow {
+      background-color: var(--color-accent);
+      box-shadow: 0 0 8px var(--color-accent), 0 0 16px var(--color-accent), inset 0 0 6px var(--color-accent);
+      height: 100%;
+      border-radius: 0.25rem;
+    }
+    .bar-expense {
+      background-color: var(--color-primary);
+      box-shadow: 0 0 8px var(--color-primary), 0 0 16px var(--color-primary), inset 0 0 6px var(--color-primary);
+      height: 100%;
+      border-radius: 0.25rem;
+    }
+    /* Dark track behind the neon fill */
+    .bar-track {
+      background-color: var(--color-surface);
+      border-radius: 0.25rem;
+      height: 1rem;
+      position: relative;
+      overflow: hidden;
+    }
+    /* Finish line icon */
+    .finish-line {
+      position: absolute;
+      right: -0.75rem;
+      top: -0.25rem;
+      font-size: 1rem;
+      text-shadow: 0 0 4px #fbbf24, 0 0 8px #fbbf24;
+    }
+    /* Car icon */
+    .car-icon {
+      position: absolute;
+      top: -0.75rem; /* lift it above the bar */
+      font-size: 1.5rem;
+      transition: left 0.6s ease-out;
+      text-shadow: 0 0 4px #fbbf24, 0 0 8px #fbbf24;
+    }
+    /* Surface backgrounds */
+    .card {
+      background-color: var(--color-surface);
+    }
+    /* Text muted */
+    .text-muted {
+      color: var(--color-muted);
+    }
+    /* Input fields */
+    input,
+    select {
+      background-color: #374151; /* gray-700 */
+      color: white;
+      border-color: #4b5563; /* gray-600 */
+    }
+    input::placeholder {
+      color: var(--color-muted);
+    }
+    /* Scrollbar styling */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background-color: var(--color-muted);
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="flex flex-col min-h-screen">
+
+  <!-- Header -->
+  <header class="card shadow-md p-4 flex justify-between items-center">
+    <h1 class="text-xl font-bold">💰 Money Tracker</h1>
+    <div class="flex items-center space-x-2">
+      <button onclick="promptOpenFile()" id="openFileBtn" class="text-sm btn-primary px-3 py-1 rounded">Open File</button>
+      <button onclick="promptCreateFile()" id="createFileBtn" class="text-sm btn-primary px-3 py-1 rounded">New File</button>
+      <span id="fileNameDisplay" class="text-sm italic text-muted"></span>
+      <button onclick="togglePage()" class="text-sm btn-secondary px-3 py-1 rounded">Summary</button>
+    </div>
+  </header>
+
+  <!-- Tracker Page -->
+  <main id="trackerPage" class="flex-1 overflow-y-auto p-4 space-y-6 hidden">
+
+    <!-- Income Section -->
+    <div class="space-y-4">
+      <div class="flex justify-center gap-2 mb-2">
+        <button onclick="setTargetView('weekly')" id="weeklyBtn" class="px-4 py-1 rounded-full text-sm btn-secondary">Weekly</button>
+        <button onclick="setTargetView('monthly')" id="monthlyBtn" class="px-4 py-1 rounded-full text-sm bg-gray-700 text-gray-300">Monthly</button>
+      </div>
+      <h2 class="text-lg font-semibold">Income Targets</h2>
+      <div id="progressBars" class="space-y-4"></div>
+    </div>
+
+    <!-- Expense Section -->
+    <div class="mt-8 space-y-4">
+      <h2 class="text-lg font-semibold">Expenses</h2>
+      <div id="expenseBars" class="space-y-4"></div>
+    </div>
+  </main>
+
+  <!-- Floating Add Income Button -->
+  <button onclick="toggleIncomeForm()" id="addIncomeBtn" class="fixed bottom-20 right-6 btn-secondary p-4 rounded-full shadow-lg text-2xl hidden">+</button>
+  <!-- Floating Add Expense Button -->
+  <button onclick="toggleExpenseForm()" id="addExpenseBtn" class="fixed bottom-20 right-24 btn-accent p-4 rounded-full shadow-lg text-2xl hidden">–</button>
+
+  <!-- Add Income Modal -->
+  <div id="incomeModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-10">
+    <div class="card p-6 rounded-xl w-[90%] max-w-md space-y-4 max-h-[90vh] overflow-y-auto relative">
+      <!-- Close icon -->
+      <button onclick="toggleIncomeForm()" class="absolute top-2 right-2 text-gray-400 hover:text-white text-xl leading-none">&times;</button>
+      <h2 class="text-lg font-semibold">Add Income</h2>
+      <div id="entrySection" class="space-y-4"></div>
+      <button onclick="toggleCategoryEditor()" class="w-full bg-gray-600 text-white py-2 rounded text-sm hover:bg-gray-500">✏️ Edit Categories</button>
+      <button onclick="toggleIncomeForm()" class="w-full btn-accent py-2 rounded text-white">Close</button>
+    </div>
+  </div>
+
+  <!-- Add Expense Modal -->
+  <div id="expenseModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-10">
+    <div class="card p-6 rounded-xl w-[90%] max-w-md space-y-4 max-h-[90vh] overflow-y-auto relative">
+      <!-- Close icon -->
+      <button onclick="toggleExpenseForm()" class="absolute top-2 right-2 text-gray-400 hover:text-white text-xl leading-none">&times;</button>
+      <h2 class="text-lg font-semibold">Add Expense</h2>
+      <div id="expenseEntrySection" class="space-y-4"></div>
+      <button onclick="toggleExpenseForm()" class="w-full btn-accent py-2 rounded text-white">Close</button>
+    </div>
+  </div>
+
+  <!-- Category Editor Modal -->
+  <div id="categoryModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-10">
+    <div class="card p-6 rounded-xl w-[90%] max-w-md space-y-4 max-h-[90vh] overflow-y-auto relative">
+      <!-- Close icon -->
+      <button onclick="toggleCategoryEditor()" class="absolute top-2 right-2 text-gray-400 hover:text-white text-xl leading-none">&times;</button>
+      <h2 class="text-lg font-semibold">Edit Income Categories</h2>
+      <ul id="categoryList" class="space-y-2"></ul>
+      <div class="flex space-x-2">
+        <input id="newCatName" placeholder="New Category" class="flex-1 border p-2 rounded text-white" />
+        <input id="newCatGoal" type="number" placeholder="Weekly Goal" class="w-24 border p-2 rounded text-white" />
+        <button onclick="addCategory()" class="btn-secondary px-3 rounded">Add</button>
+      </div>
+      <button onclick="toggleCategoryEditor()" class="w-full btn-accent py-2 rounded text-white">Close</button>
+    </div>
+  </div>
+
+  <!-- Summary Page -->
+  <main id="summaryPage" class="hidden p-4 space-y-4">
+    <div class="flex justify-between items-center">
+      <h2 class="text-lg font-semibold">📘 Summary</h2>
+      <button onclick="togglePage()" class="text-sm btn-secondary px-3 py-1 rounded">Back</button>
+    </div>
+
+    <!-- View Toggle -->
+    <div class="flex justify-center gap-2 mb-2">
+      <button onclick="changeSummaryView('daily')" id="dailyBtn" class="px-3 py-1 rounded-full text-sm btn-secondary">Daily</button>
+      <button onclick="changeSummaryView('weekly')" id="weeklySumBtn" class="px-3 py-1 rounded-full text-sm bg-gray-700 text-gray-300">Weekly</button>
+      <button onclick="changeSummaryView('monthly')" id="monthlySumBtn" class="px-3 py-1 rounded-full text-sm bg-gray-700 text-gray-300">Monthly</button>
+    </div>
+
+    <!-- Navigation Arrows & Current Label -->
+    <div class="relative flex justify-center items-center gap-4 mb-2">
+      <button onclick="navigateSummary(-1)" class="absolute left-0 text-2xl text-gray-400 hover:text-white">&larr;</button>
+      <span id="currentLabel" class="font-semibold"></span>
+      <button onclick="navigateSummary(1)" class="absolute right-0 text-2xl text-gray-400 hover:text-white">&rarr;</button>
+    </div>
+
+    <!-- Totals Overview -->
+    <div class="card p-4 rounded shadow flex flex-col md:flex-row justify-between items-center mb-4">
+      <div class="text-center mb-2 md:mb-0">
+        <span class="block text-sm font-medium">Income</span>
+        <span id="totalIncome" class="text-lg font-semibold text-secondary">$0.00</span>
+      </div>
+      <div class="text-center mb-2 md:mb-0">
+        <span class="block text-sm font-medium">Expense</span>
+        <span id="totalExpense" class="text-lg font-semibold text-primary">$0.00</span>
+      </div>
+      <div class="text-center">
+        <span class="block text-sm font-medium">Net</span>
+        <span id="totalNet" class="text-lg font-semibold">$0.00</span>
+      </div>
+    </div>
+
+    <!-- Breakdown Sections -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <!-- Income Breakdown -->
+      <div class="card p-4 rounded shadow">
+        <h3 class="font-medium mb-2">Income Breakdown</h3>
+        <ul id="incomeBreakdown" class="text-sm space-y-1"></ul>
+      </div>
+      <!-- Expense Breakdown -->
+      <div class="card p-4 rounded shadow">
+        <h3 class="font-medium mb-2">Expense Breakdown</h3>
+        <ul id="expenseBreakdown" class="text-sm space-y-1"></ul>
+      </div>
+    </div>
+
+    <!-- Tabs for Entries -->
+    <div>
+      <div class="flex border-b mb-2">
+        <button id="tabIncome" onclick="showTab('income')" class="px-4 py-2 text-sm font-medium border-b-2 border-secondary text-secondary">Income Entries</button>
+        <button id="tabExpense" onclick="showTab('expense')" class="px-4 py-2 text-sm font-medium border-b-2 border-transparent hover:border-primary">Expense Entries</button>
+      </div>
+      <!-- Income Entries List -->
+      <div id="tabContentIncome" class="space-y-4">
+        <!-- Filters -->
+        <div class="card p-4 rounded shadow flex flex-col md:flex-row gap-4">
+          <div class="flex-1">
+            <label class="block text-sm font-medium mb-1">Category</label>
+            <select id="filterIncomeCategory" class="w-full border p-2 rounded text-white" onchange="renderIncomeEntries()">
+              <option value="All">All</option>
+            </select>
+          </div>
+          <div class="flex-1">
+            <label class="block text-sm font-medium mb-1">Paid Status</label>
+            <select id="filterIncomePaid" class="w-full border p-2 rounded text-white" onchange="renderIncomeEntries()">
+              <option value="All">All</option>
+              <option value="Paid">Paid</option>
+              <option value="Unpaid">Unpaid</option>
+            </select>
+          </div>
+          <div class="flex-1">
+            <label class="block text-sm font-medium mb-1">Search Notes</label>
+            <input id="filterIncomeNote" type="text" placeholder="Keyword" class="w-full border p-2 rounded text-white" oninput="renderIncomeEntries()" />
+          </div>
+        </div>
+        <!-- Income List Container -->
+        <div id="incomeList" class="card p-4 rounded shadow"></div>
+      </div>
+      <!-- Expense Entries List -->
+      <div id="tabContentExpense" class="hidden space-y-4">
+        <!-- Filters -->
+        <div class="card p-4 rounded shadow flex flex-col md:flex-row gap-4">
+          <div class="flex-1">
+            <label class="block text-sm font-medium mb-1">Category</label>
+            <select id="filterExpenseCategory" class="w-full border p-2 rounded text-white" onchange="renderExpenseEntries()">
+              <option value="All">All</option>
+            </select>
+          </div>
+          <div class="flex-1">
+            <label class="block text-sm font-medium mb-1">Paid By</label>
+            <select id="filterExpensePaidBy" class="w-full border p-2 rounded text-white" onchange="renderExpenseEntries()">
+              <option value="All">All</option>
+              <option value="Cash">Cash</option>
+              <option value="Bofa">Bofa</option>
+              <option value="Zolve">Zolve</option>
+              <option value="Other">Other</option>
+              <option value="Hali">Hali</option>
+              <option value="Disha">Disha</option>
+            </select>
+          </div>
+          <div class="flex-1">
+            <label class="block text-sm font-medium mb-1">Search Notes</label>
+            <input id="filterExpenseNote" type="text" placeholder="Keyword" class="w-full border p-2 rounded text-white" oninput="renderExpenseEntries()" />
+          </div>
+        </div>
+        <!-- Expense List Container -->
+        <div id="expenseList" class="card p-4 rounded shadow"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modify Entry Modal (Income Only) -->
+  <div id="editModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-30">
+    <div class="card p-6 rounded-xl w-[90%] max-w-md space-y-4 relative">
+      <!-- Close icon -->
+      <button onclick="closeEditModal()" class="absolute top-2 right-2 text-gray-400 hover:text-white text-xl leading-none">&times;</button>
+      <h2 class="text-lg font-semibold">Modify Entry</h2>
+      <select id="editCategory" class="w-full border p-2 rounded text-white"></select>
+      <input id="editAmount" type="number" placeholder="Amount" class="w-full border p-2 rounded text-white" />
+      <input id="editDate" type="date" class="w-full border p-2 rounded text-white" />
+      <label class="flex items-center space-x-2 text-sm">
+        <input id="editPaid" type="checkbox" /> <span>Paid</span>
+      </label>
+      <input id="editNote" type="text" placeholder="Note (optional)" class="w-full border p-2 rounded text-white" />
+      <div class="flex justify-between">
+        <button onclick="closeEditModal()" class="text-danger">Cancel</button>
+        <button onclick="saveEditEntry()" class="btn-secondary px-4 py-1 rounded text-white">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ----------------------------------------------------------------
+    // 1) DATA STRUCTURES & INITIAL STATE
+    // ----------------------------------------------------------------
+
+    let CATEGORIES = {};           // { "Rides+":150, "3Bros":550, "Misc":260, ... }
+    let entries = [];              // [ { category, amount, date, paid, note }, ... ]
+    const EXP_CATEGORIES = ["Groceries", "Fuel", "Utilities", "Insurance", "Rent", "Interest", "Other"];
+    let entriesExp = [];           // [ { category, amount, date, paidBy, note }, ... ]
+
+    const formStates = {};
+    const expFormStates = {};
+    let targetView = 'weekly';
+    let currentView = 'daily';
+    let currentFocus;
+    let editIndex = null;
+    let fileHandle = null;
+
+    // Car icons per category
+    const INCOME_CARS = {
+      "Rides+": "🚗",
+      "3Bros": "🚚",
+      "Misc": "🎁"
+    };
+    const EXPENSE_ICONS = {
+      "Groceries": "🛒",
+      "Fuel": "⛽",
+      "Utilities": "💡",
+      "Insurance": "🛡️",
+      "Rent": "🏠",
+      "Interest": "💲",
+      "Other": "🗂️"
+    };
+
+    function initFocus() {
+      const today = new Date();
+      currentFocus = today.toISOString().slice(0, 10);
+    }
+    initFocus();
+
+    // ----------------------------------------------------------------
+    // 2) FILE SYSTEM ACCESS API: OPEN / CREATE / READ / WRITE
+    // ----------------------------------------------------------------
+
+    async function promptOpenFile() {
+      if (!window.showOpenFilePicker) {
+        alert("Your browser does not support the File System Access API.\nData cannot be persistent outside this session.");
+        return;
+      }
+      try {
+        const [handle] = await window.showOpenFilePicker({
+          types: [{ description: "JSON Files", accept: { "application/json": [".json"] } }],
+          multiple: false
+        });
+        fileHandle = handle;
+        document.getElementById("fileNameDisplay").textContent = handle.name;
+        const file = await handle.getFile();
+        const contents = await file.text();
+        const data = JSON.parse(contents);
+        if (!data.categories || !data.incomeEntries || !data.expenseEntries) {
+          throw new Error("Invalid format");
+        }
+        CATEGORIES = data.categories;
+        entries = data.incomeEntries;
+        entriesExp = data.expenseEntries;
+        afterDataLoad();
+      } catch (err) {
+        console.error(err);
+        alert("Failed to open file or invalid data format.");
+      }
+    }
+
+    async function promptCreateFile() {
+      if (!window.showSaveFilePicker) {
+        alert("Your browser does not support the File System Access API.\nData cannot be persistent outside this session.");
+        return;
+      }
+      try {
+        const handle = await window.showSaveFilePicker({
+          suggestedName: "money-tracker-data.json",
+          types: [{ description: "JSON Files", accept: { "application/json": [".json"] } }]
+        });
+        fileHandle = handle;
+        document.getElementById("fileNameDisplay").textContent = handle.name;
+        CATEGORIES = { "Rides+":150, "3Bros":550, "Misc":260 };
+        entries = [];
+        entriesExp = [];
+        await writeDataFile();
+        afterDataLoad();
+      } catch (err) {
+        console.error(err);
+        alert("Failed to create file.");
+      }
+    }
+
+    async function writeDataFile() {
+      if (!fileHandle) return;
+      try {
+        const writable = await fileHandle.createWritable();
+        const payload = {
+          categories: CATEGORIES,
+          incomeEntries: entries,
+          expenseEntries: entriesExp
+        };
+        await writable.write(JSON.stringify(payload, null, 2));
+        await writable.close();
+      } catch (err) {
+        console.error(err);
+        alert("Error saving to file.");
+      }
+    }
+
+    function afterDataLoad() {
+      document.getElementById("trackerPage").classList.remove("hidden");
+      document.getElementById("addIncomeBtn").classList.remove("hidden");
+      document.getElementById("addExpenseBtn").classList.remove("hidden");
+      document.getElementById("openFileBtn").classList.add("hidden");
+      document.getElementById("createFileBtn").classList.add("hidden");
+
+      renderCategoryList();
+      renderBars();
+      renderExpenseBars();
+      renderEntrySection();
+      renderExpenseEntrySection();
+      renderFilters();
+      showTab('income');
+      renderIncomeEntries();
+      renderExpenseEntries();
+      renderSummary();
+    }
+
+    // ----------------------------------------------------------------
+    // 3) UI TOGGLES & RENDERERS
+    // ----------------------------------------------------------------
+
+    function togglePage() {
+      document.getElementById("trackerPage").classList.toggle("hidden");
+      document.getElementById("summaryPage").classList.toggle("hidden");
+      renderFilters();
+      renderIncomeEntries();
+      renderExpenseEntries();
+      renderSummary();
+    }
+
+    function toggleIncomeForm() {
+      const modal = document.getElementById("incomeModal");
+      modal.classList.toggle("hidden");
+      if (!modal.classList.contains("hidden")) renderEntrySection();
+    }
+
+    function toggleExpenseForm() {
+      const modal = document.getElementById("expenseModal");
+      modal.classList.toggle("hidden");
+      if (!modal.classList.contains("hidden")) renderExpenseEntrySection();
+    }
+
+    function toggleCategoryEditor() {
+      const modal = document.getElementById("categoryModal");
+      modal.classList.toggle("hidden");
+      if (!modal.classList.contains("hidden")) renderCategoryList();
+    }
+
+    function setTargetView(view) {
+      targetView = view;
+      document.getElementById("weeklyBtn").classList.toggle("btn-secondary", view === 'weekly');
+      document.getElementById("weeklyBtn").classList.toggle("bg-gray-700", view !== 'weekly');
+      document.getElementById("weeklyBtn").classList.toggle("text-gray-300", view !== 'weekly');
+      document.getElementById("monthlyBtn").classList.toggle("btn-secondary", view === 'monthly');
+      document.getElementById("monthlyBtn").classList.toggle("bg-gray-700", view !== 'monthly');
+      document.getElementById("monthlyBtn").classList.toggle("text-gray-300", view !== 'monthly');
+      renderBars();
+      renderExpenseBars();
+    }
+
+    // ----------------------------------------------------------------
+    // 4) INCOME: CRUD + RENDERING
+    // ----------------------------------------------------------------
+
+    function renderCategoryList() {
+      const list = document.getElementById("categoryList");
+      list.innerHTML = "";
+      Object.keys(CATEGORIES).forEach(cat => {
+        list.innerHTML += `
+          <li class="flex items-center space-x-2">
+            <input class="border p-1 flex-1 rounded text-white" value="${cat}"
+                   onchange="renameCategory('${cat}', this.value)" />
+            <input class="w-20 border p-1 rounded text-white" type="number" value="${CATEGORIES[cat]}"
+                   onchange="updateGoal('${cat}', this.value)" />
+            <button onclick="deleteCategory('${cat}')" class="btn-delete text-xs">Delete</button>
+          </li>
+        `;
+      });
+    }
+
+    function addCategory() {
+      const name = document.getElementById("newCatName").value.trim();
+      const goal = parseFloat(document.getElementById("newCatGoal").value);
+      if (!name || isNaN(goal)) {
+        alert("Enter a valid category name and goal.");
+        return;
+      }
+      if (CATEGORIES[name] !== undefined) {
+        alert("Category already exists.");
+        return;
+      }
+      CATEGORIES[name] = goal;
+      document.getElementById("newCatName").value = "";
+      document.getElementById("newCatGoal").value = "";
+      writeDataFile();
+      renderCategoryList();
+      renderBars();
+      renderEntrySection();
+      renderFilters();
+      renderIncomeEntries();
+      renderSummary();
+    }
+
+    function renameCategory(oldName, newName) {
+      if (!newName || oldName === newName) return;
+      if (CATEGORIES[newName] !== undefined) {
+        alert("That category name already exists.");
+        renderCategoryList();
+        return;
+      }
+      CATEGORIES[newName] = CATEGORIES[oldName];
+      delete CATEGORIES[oldName];
+      // Do NOT delete past entries—they keep their category string
+      writeDataFile();
+      renderCategoryList();
+      renderBars();
+      renderEntrySection();
+      renderFilters();
+      renderIncomeEntries();
+      renderSummary();
+    }
+
+    function updateGoal(cat, value) {
+      const num = parseFloat(value);
+      if (isNaN(num)) return;
+      CATEGORIES[cat] = num;
+      writeDataFile();
+      renderBars();
+      renderEntrySection();
+      renderFilters();
+      renderIncomeEntries();
+      renderSummary();
+    }
+
+    function deleteCategory(cat) {
+      if (!confirm(`Delete category "${cat}"? This will not remove past entries.`)) return;
+      delete CATEGORIES[cat];
+      // Existing entries keep their original category string
+      writeDataFile();
+      renderCategoryList();
+      renderBars();
+      renderEntrySection();
+      renderFilters();
+      renderIncomeEntries();
+      renderSummary();
+    }
+
+    function saveEntry(category, amount, date, paid, note) {
+      entries.push({ category, amount: parseFloat(amount), date, paid, note });
+      writeDataFile();
+      renderBars();
+      renderEntrySection();
+      renderFilters();
+      renderIncomeEntries();
+      renderSummary();
+    }
+
+    function renderEntrySection() {
+      const section = document.getElementById("entrySection");
+      section.innerHTML = "";
+      Object.keys(CATEGORIES).forEach(cat => {
+        const isOpen = formStates[cat];
+        section.innerHTML += `
+          <div class="card shadow rounded p-4">
+            <div class="flex justify-between items-center mb-2">
+              <span class="font-semibold">${cat}</span>
+              <button onclick="toggleForm('${cat}')" class="text-secondary text-lg font-bold">+</button>
+            </div>
+            ${isOpen ? renderForm(cat) : ""}
+          </div>
+        `;
+      });
+    }
+
+    function renderForm(cat) {
+      const today = new Date().toISOString().split("T")[0];
+      return `
+        <div class="space-y-2">
+          <input id="amt-${cat}" type="number" placeholder="Amount" class="w-full border p-2 rounded text-white" />
+          <input id="date-${cat}" type="date" value="${today}" class="w-full border p-2 rounded text-white" />
+          <label class="flex items-center space-x-2 text-sm">
+            <input id="paid-${cat}" type="checkbox" /> <span>Paid</span>
+          </label>
+          <input id="note-${cat}" type="text" placeholder="Note (optional)" class="w-full border p-2 rounded text-white" />
+          <button onclick="submitForm('${cat}')" class="w-full btn-secondary py-2 rounded text-white">Add Entry</button>
+        </div>
+      `;
+    }
+
+    function toggleForm(cat) {
+      formStates[cat] = !formStates[cat];
+      renderEntrySection();
+    }
+
+    function submitForm(cat) {
+      const amt = document.getElementById(`amt-${cat}`).value;
+      const date = document.getElementById(`date-${cat}`).value;
+      const paid = document.getElementById(`paid-${cat}`).checked;
+      const note = document.getElementById(`note-${cat}`).value;
+      if (!amt || !date) {
+        alert("Fill in all required fields.");
+        return;
+      }
+      saveEntry(cat, amt, date, paid, note);
+      formStates[cat] = false;
+      renderEntrySection();
+    }
+
+    // ----------------------------------------------------------------
+    // 5) EXPENSE: CRUD + RENDERING
+    // ----------------------------------------------------------------
+
+    function saveExpense(category, amount, date, paidBy, note) {
+      entriesExp.push({ category, amount: parseFloat(amount), date, paidBy, note });
+      writeDataFile();
+      renderExpenseBars();
+      renderExpenseEntrySection();
+      renderExpenseFilters();
+      renderExpenseEntries();
+      renderSummary();
+    }
+
+    function renderExpenseEntrySection() {
+      const section = document.getElementById("expenseEntrySection");
+      section.innerHTML = "";
+      EXP_CATEGORIES.forEach(cat => {
+        const isOpen = expFormStates[cat];
+        section.innerHTML += `
+          <div class="card shadow rounded p-4">
+            <div class="flex justify-between items-center mb-2">
+              <span class="font-semibold">${cat}</span>
+              <button onclick="toggleExpForm('${cat}')" class="text-accent text-lg font-bold">–</button>
+            </div>
+            ${isOpen ? renderExpForm(cat) : ""}
+          </div>
+        `;
+      });
+    }
+
+    function renderExpForm(cat) {
+      const today = new Date().toISOString().split("T")[0];
+      return `
+        <div class="space-y-2">
+          <input id="expAmt-${cat}" type="number" placeholder="Amount" class="w-full border p-2 rounded text-white" />
+          <input id="expDate-${cat}" type="date" value="${today}" class="w-full border p-2 rounded text-white" />
+          <select id="expPaidBy-${cat}" class="w-full border p-2 rounded text-white">
+            <option value="Cash">Cash</option>
+            <option value="Bofa">Bofa</option>
+            <option value="Zolve">Zolve</option>
+            <option value="Other">Other</option>
+            <option value="Hali">Hali</option>
+            <option value="Disha">Disha</option>
+          </select>
+          <input id="expNote-${cat}" type="text" placeholder="Note (optional)" class="w-full border p-2 rounded text-white" />
+          <button onclick="submitExpForm('${cat}')" class="w-full btn-accent py-2 rounded text-white">Add Expense</button>
+        </div>
+      `;
+    }
+
+    function toggleExpForm(cat) {
+      expFormStates[cat] = !expFormStates[cat];
+      renderExpenseEntrySection();
+    }
+
+    function submitExpForm(cat) {
+      const amt = document.getElementById(`expAmt-${cat}`).value;
+      const date = document.getElementById(`expDate-${cat}`).value;
+      const paidBy = document.getElementById(`expPaidBy-${cat}`).value;
+      const note = document.getElementById(`expNote-${cat}`).value;
+      if (!amt || !date) {
+        alert("Fill in all required fields.");
+        return;
+      }
+      saveExpense(cat, amt, date, paidBy, note);
+      expFormStates[cat] = false;
+      renderExpenseEntrySection();
+    }
+
+    // ----------------------------------------------------------------
+    // 6) DASHBOARD BARS (INCOME & EXPENSE), THEMED
+    // ----------------------------------------------------------------
+
+    function renderBars() {
+      const container = document.getElementById("progressBars");
+      container.innerHTML = "";
+
+      Object.keys(CATEGORIES).forEach(cat => {
+        const baseGoal = CATEGORIES[cat];
+        const target = (targetView === 'monthly') ? (baseGoal * 4) : baseGoal;
+        let total = 0;
+        entries.forEach(e => { if (e.category === cat) total += e.amount; });
+        const overflow = total > target;
+        const percent = Math.min((total / target) * 100, 100);
+        const fillClass = overflow ? "bar-income-overflow" : "bar-income";
+        const iconLeft = `calc(${percent}% - 0.75rem)`; 
+        const car = INCOME_CARS[cat] || "🚗";
+
+        container.innerHTML += `
+          <div class="mb-4">
+            <div class="flex justify-between items-center mb-1">
+              <span class="font-medium">${cat}</span>
+              <span class="text-sm text-muted">$${total.toFixed(2)} / $${target}</span>
+            </div>
+            <div class="bar-track rounded-full">
+              <div class="${fillClass}" style="width: ${percent}%;"></div>
+              <div class="car-icon" style="left: ${iconLeft};">${car}</div>
+              <div class="finish-line">🏁</div>
+            </div>
+          </div>`;
+      });
+    }
+
+    function renderExpenseBars() {
+      const container = document.getElementById("expenseBars");
+      container.innerHTML = "";
+      const totals = {};
+      EXP_CATEGORIES.forEach(c => totals[c] = 0);
+      entriesExp.forEach(e => { if (totals[e.category] !== undefined) totals[e.category] += e.amount; });
+      const maxTotal = Math.max(...Object.values(totals), 1);
+
+      EXP_CATEGORIES.forEach(cat => {
+        const total = totals[cat];
+        const percent = (total / maxTotal) * 100;
+        const expenseIcon = EXPENSE_ICONS[cat] || "💵";
+        const iconLeft = `calc(${percent}% - 0.75rem)`;
+
+        container.innerHTML += `
+          <div class="mb-4">
+            <div class="flex justify-between items-center mb-1">
+              <span class="font-medium">${cat}</span>
+              <span class="text-sm text-muted">$${total.toFixed(2)}</span>
+            </div>
+            <div class="bar-track rounded-full">
+              <div class="bar-expense" style="width: ${percent}%;"></div>
+              <div class="car-icon" style="left: ${iconLeft};">${expenseIcon}</div>
+              <div class="finish-line">🏁</div>
+            </div>
+          </div>`;
+      });
+    }
+
+    // ----------------------------------------------------------------
+    // 7) SUMMARY PAGE LOGIC (TOTALS + BREAKDOWNS + ENTRIES LISTS)
+    // ----------------------------------------------------------------
+
+    function formatDate(iso) {
+      const d = new Date(iso);
+      return d.toLocaleDateString("en-US", { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' });
+    }
+
+    function changeSummaryView(view) {
+      currentView = view;
+      const now = new Date();
+      if (view === 'daily') {
+        currentFocus = now.toISOString().slice(0, 10);
+      } else if (view === 'weekly') {
+        const ws = new Date(now);
+        ws.setDate(ws.getDate() - ws.getDay());
+        currentFocus = ws.toISOString().slice(0, 10);
+      } else {
+        currentFocus = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+      }
+      document.getElementById("dailyBtn").classList.toggle("btn-secondary", view === "daily");
+      document.getElementById("dailyBtn").classList.toggle("bg-gray-700", view !== "daily");
+      document.getElementById("dailyBtn").classList.toggle("text-gray-300", view !== "daily");
+      document.getElementById("weeklySumBtn").classList.toggle("btn-secondary", view === "weekly");
+      document.getElementById("weeklySumBtn").classList.toggle("bg-gray-700", view !== "weekly");
+      document.getElementById("weeklySumBtn").classList.toggle("text-gray-300", view !== "weekly");
+      document.getElementById("monthlySumBtn").classList.toggle("btn-secondary", view === "monthly");
+      document.getElementById("monthlySumBtn").classList.toggle("bg-gray-700", view !== "monthly");
+      document.getElementById("monthlySumBtn").classList.toggle("text-gray-300", view !== "monthly");
+      renderFilters();
+      renderIncomeEntries();
+      renderExpenseEntries();
+      renderSummary();
+    }
+
+    function navigateSummary(offset) {
+      if (currentView === 'daily') {
+        const dt = new Date(currentFocus);
+        dt.setDate(dt.getDate() + offset);
+        currentFocus = dt.toISOString().slice(0, 10);
+      } else if (currentView === 'weekly') {
+        const dt = new Date(currentFocus);
+        dt.setDate(dt.getDate() + offset * 7);
+        currentFocus = dt.toISOString().slice(0, 10);
+      } else {
+        const [y, m] = currentFocus.split('-').map(Number);
+        let newMonth = m - 1 + offset;
+        let newYear = y;
+        if (newMonth < 0) { newMonth = 11; newYear--; }
+        if (newMonth > 11) { newMonth = 0; newYear++; }
+        currentFocus = `${newYear}-${String(newMonth + 1).padStart(2, "0")}`;
+      }
+      renderIncomeEntries();
+      renderExpenseEntries();
+      renderSummary();
+    }
+
+    function renderFilters() {
+      const fIncCat = document.getElementById("filterIncomeCategory");
+      fIncCat.innerHTML = '<option value="All">All</option>';
+      Object.keys(CATEGORIES).forEach(cat => {
+        fIncCat.innerHTML += `<option value="${cat}">${cat}</option>`;
+      });
+      const fExpCat = document.getElementById("filterExpenseCategory");
+      fExpCat.innerHTML = '<option value="All">All</option>';
+      EXP_CATEGORIES.forEach(cat => {
+        fExpCat.innerHTML += `<option value="${cat}">${cat}</option>`;
+      });
+    }
+
+    function renderIncomeEntries() {
+      const view = currentView;
+      const catFilter = document.getElementById("filterIncomeCategory").value;
+      const paidFilter = document.getElementById("filterIncomePaid").value;
+      const noteFilter = document.getElementById("filterIncomeNote").value.toLowerCase();
+
+      let filtered = entries.filter(e => {
+        const d = new Date(e.date);
+        let matchDate = false;
+        if (view === 'daily') {
+          matchDate = e.date === currentFocus;
+        } else if (view === 'weekly') {
+          const ws = new Date(currentFocus);
+          const we = new Date(ws);
+          we.setDate(ws.getDate() + 6);
+          matchDate = (d >= ws && d <= we);
+        } else {
+          const [yy, mm] = currentFocus.split('-').map(Number);
+          matchDate = (d.getFullYear() === yy && d.getMonth() + 1 === mm);
+        }
+        if (!matchDate) return false;
+        if (catFilter !== "All" && e.category !== catFilter) return false;
+        if (paidFilter === "Paid" && !e.paid) return false;
+        if (paidFilter === "Unpaid" && e.paid) return false;
+        if (noteFilter && !e.note.toLowerCase().includes(noteFilter)) return false;
+        return true;
+      });
+
+      const container = document.getElementById("incomeList");
+      container.innerHTML = "";
+
+      if (!filtered.length) {
+        container.innerHTML = `<div class="text-center text-muted">No income entries.</div>`;
+        return;
+      }
+
+      if (view === 'daily') {
+        filtered.sort((a,b) => new Date(b.date) - new Date(a.date));
+        filtered.forEach(e => {
+          const idx = entries.findIndex(x => x === e);
+          const paidIcon = e.paid ? "✅" : "🕒";
+          container.innerHTML += `
+            <div class="flex justify-between items-center border-b py-2">
+              <div>
+                <strong>#${idx + 1}</strong> ${e.category} – $${e.amount.toFixed(2)} ${paidIcon}
+                ${e.note ? `<div class="text-muted text-xs">📝 ${e.note}</div>` : ""}
+              </div>
+              <button onclick="openEditModal(${idx})" class="text-primary text-xs hover:text-white">Modify</button>
+            </div>`;
+        });
+      } else if (view === 'weekly') {
+        const dayMap = {};
+        filtered.forEach(e => {
+          if (!dayMap[e.date]) dayMap[e.date] = [];
+          dayMap[e.date].push(e);
+        });
+        Object.keys(dayMap)
+          .sort((a,b) => new Date(b) - new Date(a))
+          .forEach(dayKey => {
+            const dayEntries = dayMap[dayKey].slice().sort((a,b) => new Date(b.date) - new Date(a.date));
+            const dayTotal = dayEntries.reduce((sum, e) => sum + e.amount, 0).toFixed(2);
+            container.innerHTML += `
+              <div class="bg-gray-700 p-2 rounded mb-2">
+                <h4 class="font-medium">${formatDate(dayKey)} – Total: $${dayTotal}</h4>
+                ${dayEntries.map(e => {
+                  const idx = entries.findIndex(x => x === e);
+                  const paidIcon = e.paid ? "✅" : "🕒";
+                  return `
+                    <div class="flex justify-between items-center border-b py-1">
+                      <div>
+                        <strong>#${idx + 1}</strong> ${e.category} – $${e.amount.toFixed(2)} ${paidIcon}
+                        ${e.note ? `<div class="text-muted text-xs">📝 ${e.note}</div>` : ""}
+                      </div>
+                      <button onclick="openEditModal(${idx})" class="text-primary text-xs hover:text-white">Modify</button>
+                    </div>`;
+                }).join('')}
+              </div>`;
+          });
+      } else {
+        const weekMap = {};
+        filtered.forEach(e => {
+          const d = new Date(e.date);
+          const weekNum = Math.floor((d.getDate() - 1) / 7) + 1;
+          const wkKey = `Week ${weekNum}`;
+          if (!weekMap[wkKey]) weekMap[wkKey] = [];
+          weekMap[wkKey].push(e);
+        });
+        Object.keys(weekMap).forEach(wkKey => {
+          const weekEntries = weekMap[wkKey].slice().sort((a,b) => new Date(b.date) - new Date(a.date));
+          const weekTotal = weekEntries.reduce((sum, e) => sum + e.amount, 0).toFixed(2);
+          container.innerHTML += `
+            <div class="bg-gray-700 p-2 rounded mb-2">
+              <h4 class="font-medium">${wkKey} – Total: $${weekTotal}</h4>
+              ${weekEntries.map(e => {
+                const idx = entries.findIndex(x => x === e);
+                const paidIcon = e.paid ? "✅" : "🕒";
+                return `
+                  <div class="flex justify-between items-center border-b py-1">
+                    <div>
+                      <strong>#${idx + 1}</strong> ${e.category} – $${e.amount.toFixed(2)} ${paidIcon}
+                      ${e.note ? `<div class="text-muted text-xs">📝 ${e.note}</div>` : ""}
+                    </div>
+                    <button onclick="openEditModal(${idx})" class="text-primary text-xs hover:text-white">Modify</button>
+                  </div>`;
+              }).join('')}
+            </div>`;
+        });
+      }
+    }
+
+    function renderExpenseEntries() {
+      const view = currentView;
+      const catFilter = document.getElementById("filterExpenseCategory").value;
+      const paidByFilter = document.getElementById("filterExpensePaidBy").value;
+      const noteFilter = document.getElementById("filterExpenseNote").value.toLowerCase();
+
+      let filtered = entriesExp.filter(e => {
+        const d = new Date(e.date);
+        let matchDate = false;
+        if (view === 'daily') {
+          matchDate = e.date === currentFocus;
+        } else if (view === 'weekly') {
+          const ws = new Date(currentFocus);
+          const we = new Date(ws);
+          we.setDate(ws.getDate() + 6);
+          matchDate = (d >= ws && d <= we);
+        } else {
+          const [yy, mm] = currentFocus.split('-').map(Number);
+          matchDate = (d.getFullYear() === yy && d.getMonth() + 1 === mm);
+        }
+        if (!matchDate) return false;
+        if (catFilter !== "All" && e.category !== catFilter) return false;
+        if (paidByFilter !== "All" && e.paidBy !== paidByFilter) return false;
+        if (noteFilter && !e.note.toLowerCase().includes(noteFilter)) return false;
+        return true;
+      });
+
+      const container = document.getElementById("expenseList");
+      container.innerHTML = "";
+
+      if (!filtered.length) {
+        container.innerHTML = `<div class="text-center text-muted">No expense entries.</div>`;
+        return;
+      }
+
+      if (view === 'daily') {
+        filtered.sort((a,b) => new Date(b.date) - new Date(a.date));
+        filtered.forEach(e => {
+          const idx = entriesExp.findIndex(x => x === e);
+          container.innerHTML += `
+            <div class="flex justify-between items-center border-b py-2">
+              <div>
+                <strong>#${idx + 1}</strong> ${e.category} – $${e.amount.toFixed(2)} (Paid by: ${e.paidBy})
+                ${e.note ? `<div class="text-muted text-xs">📝 ${e.note}</div>` : ""}
+              </div>
+            </div>`;
+        });
+      } else if (view === 'weekly') {
+        const dayMap = {};
+        filtered.forEach(e => {
+          if (!dayMap[e.date]) dayMap[e.date] = [];
+          dayMap[e.date].push(e);
+        });
+        Object.keys(dayMap)
+          .sort((a,b) => new Date(b) - new Date(a))
+          .forEach(dayKey => {
+            const dayEntries = dayMap[dayKey].slice().sort((a,b) => new Date(b.date) - new Date(a.date));
+            const dayTotal = dayEntries.reduce((sum, e) => sum + e.amount, 0).toFixed(2);
+            container.innerHTML += `
+              <div class="bg-gray-700 p-2 rounded mb-2">
+                <h4 class="font-medium">${formatDate(dayKey)} – Total: $${dayTotal}</h4>
+                ${dayEntries.map(e => {
+                  const idx = entriesExp.findIndex(x => x === e);
+                  return `
+                    <div class="flex justify-between items-center border-b py-1">
+                      <div>
+                        <strong>#${idx + 1}</strong> ${e.category} – $${e.amount.toFixed(2)} (Paid by: ${e.paidBy})
+                        ${e.note ? `<div class="text-muted text-xs">📝 ${e.note}</div>` : ""}
+                      </div>
+                    </div>`;
+                }).join('')}
+              </div>`;
+          });
+      } else {
+        const weekMap = {};
+        filtered.forEach(e => {
+          const d = new Date(e.date);
+          const weekNum = Math.floor((d.getDate() - 1) / 7) + 1;
+          const wkKey = `Week ${weekNum}`;
+          if (!weekMap[wkKey]) weekMap[wkKey] = [];
+          weekMap[wkKey].push(e);
+        });
+        Object.keys(weekMap).forEach(wkKey => {
+          const weekEntries = weekMap[wkKey].slice().sort((a,b) => new Date(b.date) - new Date(a.date));
+          const weekTotal = weekEntries.reduce((sum, e) => sum + e.amount, 0).toFixed(2);
+          container.innerHTML += `
+            <div class="bg-gray-700 p-2 rounded mb-2">
+              <h4 class="font-medium">${wkKey} – Total: $${weekTotal}</h4>
+              ${weekEntries.map(e => {
+                const idx = entriesExp.findIndex(x => x === e);
+                return `
+                  <div class="flex justify-between items-center border-b py-1">
+                    <div>
+                      <strong>#${idx + 1}</strong> ${e.category} – $${e.amount.toFixed(2)} (Paid by: ${e.paidBy})
+                      ${e.note ? `<div class="text-muted text-xs">📝 ${e.note}</div>` : ""}
+                    </div>
+                  </div>`;
+              }).join('')}
+            </div>`;
+        });
+      }
+    }
+
+    function renderSummary() {
+      const view = currentView;
+      const label = document.getElementById("currentLabel");
+      let incomeList = [];
+      let expenseList = [];
+
+      if (view === 'daily') {
+        incomeList = entries.filter(e => e.date === currentFocus);
+        expenseList = entriesExp.filter(e => e.date === currentFocus);
+        label.textContent = `${formatDate(currentFocus)}`;
+      } else if (view === 'weekly') {
+        const ws = new Date(currentFocus);
+        const we = new Date(ws);
+        we.setDate(ws.getDate() + 6);
+        incomeList = entries.filter(e => {
+          const d = new Date(e.date);
+          return d >= ws && d <= we;
+        });
+        expenseList = entriesExp.filter(e => {
+          const d = new Date(e.date);
+          return d >= ws && d <= we;
+        });
+        label.textContent = `Week: ${formatDate(ws.toISOString().slice(0, 10))} – ${formatDate(we.toISOString().slice(0,10))}`;
+      } else {
+        const [y, m] = currentFocus.split('-').map(Number);
+        incomeList = entries.filter(e => {
+          const d = new Date(e.date);
+          return d.getFullYear() === y && d.getMonth() + 1 === m;
+        });
+        expenseList = entriesExp.filter(e => {
+          const d = new Date(e.date);
+          return d.getFullYear() === y && d.getMonth() + 1 === m;
+        });
+        const monthName = new Date(y, m - 1).toLocaleString('default', { month: 'long' });
+        label.textContent = `${monthName} ${y}`;
+      }
+
+      const totalIncome = incomeList.reduce((sum, e) => sum + e.amount, 0).toFixed(2);
+      const totalExpense = expenseList.reduce((sum, e) => sum + e.amount, 0).toFixed(2);
+      const net = (parseFloat(totalIncome) - parseFloat(totalExpense)).toFixed(2);
+
+      document.getElementById("totalIncome").textContent = `$${totalIncome}`;
+      document.getElementById("totalExpense").textContent = `$${totalExpense}`;
+      const netEl = document.getElementById("totalNet");
+      netEl.textContent = (net >= 0 ? `+$${net}` : `-$${Math.abs(net)}`);
+      netEl.classList.toggle("text-secondary", net >= 0);
+      netEl.classList.toggle("text-primary", net < 0);
+
+      const incomeBreakdownEl = document.getElementById("incomeBreakdown");
+      incomeBreakdownEl.innerHTML = "";
+      const incTotals = {};
+      Object.keys(CATEGORIES).forEach(cat => incTotals[cat] = 0);
+      incomeList.forEach(e => { incTotals[e.category] = (incTotals[e.category] || 0) + e.amount; });
+      Object.keys(incTotals).forEach(cat => {
+        if (incTotals[cat] > 0) {
+          incomeBreakdownEl.innerHTML += `<li>${cat}: $${incTotals[cat].toFixed(2)}</li>`;
+        }
+      });
+      if (!Object.values(incTotals).some(v => v > 0)) {
+        incomeBreakdownEl.innerHTML = `<li class="text-muted">No income</li>`;
+      }
+
+      const expenseBreakdownEl = document.getElementById("expenseBreakdown");
+      expenseBreakdownEl.innerHTML = "";
+      const expTotals = {};
+      EXP_CATEGORIES.forEach(cat => expTotals[cat] = 0);
+      expenseList.forEach(e => { expTotals[e.category] = (expTotals[e.category] || 0) + e.amount; });
+      EXP_CATEGORIES.forEach(cat => {
+        if (expTotals[cat] > 0) {
+          expenseBreakdownEl.innerHTML += `<li>${cat}: $${expTotals[cat].toFixed(2)}</li>`;
+        }
+      });
+      if (!EXP_CATEGORIES.some(cat => expTotals[cat] > 0)) {
+        expenseBreakdownEl.innerHTML = `<li class="text-muted">No expenses</li>`;
+      }
+    }
+
+    // ----------------------------------------------------------------
+    // 8) EDIT MODAL LOGIC (INCOME ONLY)
+    // ----------------------------------------------------------------
+
+    function openEditModal(index) {
+      const entry = entries[index];
+      editIndex = index;
+      const catOptions = Object.keys(CATEGORIES).map(c =>
+        `<option ${entry.category === c ? "selected" : ""}>${c}</option>`
+      ).join("");
+      document.getElementById("editCategory").innerHTML = catOptions;
+      document.getElementById("editAmount").value = entry.amount;
+      document.getElementById("editDate").value = entry.date;
+      document.getElementById("editPaid").checked = entry.paid;
+      document.getElementById("editNote").value = entry.note || "";
+      document.getElementById("editModal").classList.remove("hidden");
+    }
+
+    function closeEditModal() {
+      document.getElementById("editModal").classList.add("hidden");
+      editIndex = null;
+    }
+
+    function saveEditEntry() {
+      if (editIndex === null) return;
+      entries[editIndex].category = document.getElementById("editCategory").value;
+      entries[editIndex].amount = parseFloat(document.getElementById("editAmount").value);
+      entries[editIndex].date = document.getElementById("editDate").value;
+      entries[editIndex].paid = document.getElementById("editPaid").checked;
+      entries[editIndex].note = document.getElementById("editNote").value;
+      writeDataFile();
+      closeEditModal();
+      renderBars();
+      renderIncomeEntries();
+      renderSummary();
+    }
+
+    function showTab(tab) {
+      document.getElementById("tabContentIncome").classList.toggle("hidden", tab !== 'income');
+      document.getElementById("tabContentExpense").classList.toggle("hidden", tab !== 'expense');
+      document.getElementById("tabIncome").classList.toggle("text-secondary", tab === 'income');
+      document.getElementById("tabIncome").classList.toggle("border-secondary", tab === 'income');
+      document.getElementById("tabExpense").classList.toggle("text-primary", tab === 'expense');
+      document.getElementById("tabExpense").classList.toggle("border-transparent", tab !== 'expense');
+      renderIncomeEntries();
+      renderExpenseEntries();
+    }
+
+    // ----------------------------------------------------------------
+    // 9) INITIALIZE
+    // ----------------------------------------------------------------
+
+    window.addEventListener("DOMContentLoaded", () => {
+      // Wait for user to open or create a file
+    });
+  </script>
+</body>
+</html>
