@@ -366,7 +366,21 @@
     initFocus();
 
     // ----------------------------------------------------------------
-    // 2) FILE SYSTEM ACCESS API: OPEN / CREATE / READ / WRITE
+    // 2) UTILITIES: PARSE DATE STRING AS LOCAL
+    // ----------------------------------------------------------------
+    function parseDateLocal(isoString) {
+      // isoString: "YYYY-MM-DD"
+      const [y, m, d] = isoString.split('-').map(Number);
+      return new Date(y, m - 1, d);
+    }
+    function formatDate(isoString) {
+      // Display "Wednesday, Jun 2, 2025" using local date
+      const d = parseDateLocal(isoString);
+      return d.toLocaleDateString("en-US", { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' });
+    }
+
+    // ----------------------------------------------------------------
+    // 3) FILE SYSTEM ACCESS API: OPEN / CREATE / READ / WRITE
     // ----------------------------------------------------------------
 
     async function promptOpenFile() {
@@ -457,7 +471,7 @@
     }
 
     // ----------------------------------------------------------------
-    // 3) UI TOGGLES & RENDERERS
+    // 4) UI TOGGLES & RENDERERS
     // ----------------------------------------------------------------
 
     function togglePage() {
@@ -500,7 +514,7 @@
     }
 
     // ----------------------------------------------------------------
-    // 4) INCOME: CRUD + RENDERING
+    // 5) INCOME: CRUD + RENDERING
     // ----------------------------------------------------------------
 
     function renderCategoryList() {
@@ -648,7 +662,7 @@
     }
 
     // ----------------------------------------------------------------
-    // 5) EXPENSE: CRUD + RENDERING
+    // 6) EXPENSE: CRUD + RENDERING
     // ----------------------------------------------------------------
 
     function saveExpense(category, amount, date, paidBy, note) {
@@ -718,7 +732,7 @@
     }
 
     // ----------------------------------------------------------------
-    // 6) DASHBOARD BARS (INCOME & EXPENSE), THEMED
+    // 7) DASHBOARD BARS (INCOME & EXPENSE), THEMED
     // ----------------------------------------------------------------
 
     function renderBars() {
@@ -733,7 +747,7 @@
         const overflow = total > target;
         const percent = Math.min((total / target) * 100, 100);
         const fillClass = overflow ? "bar-income-overflow" : "bar-income";
-        const iconLeft = `calc(${percent}% - 0.75rem)`; 
+        const iconLeft = `calc(${percent}% - 0.75rem)`;
         const car = INCOME_CARS[cat] || "🚗";
 
         container.innerHTML += `
@@ -781,13 +795,8 @@
     }
 
     // ----------------------------------------------------------------
-    // 7) SUMMARY PAGE LOGIC (TOTALS + BREAKDOWNS + ENTRIES LISTS)
+    // 8) SUMMARY PAGE LOGIC (TOTALS + BREAKDOWNS + ENTRIES LISTS)
     // ----------------------------------------------------------------
-
-    function formatDate(iso) {
-      const d = new Date(iso);
-      return d.toLocaleDateString("en-US", { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' });
-    }
 
     function changeSummaryView(view) {
       currentView = view;
@@ -795,9 +804,11 @@
       if (view === 'daily') {
         currentFocus = now.toISOString().slice(0, 10);
       } else if (view === 'weekly') {
-        const ws = new Date(now);
-        ws.setDate(ws.getDate() - ws.getDay());
-        currentFocus = ws.toISOString().slice(0, 10);
+        // Compute local week start
+        const dt = new Date();
+        const day = dt.getDay();
+        dt.setDate(dt.getDate() - day);
+        currentFocus = dt.toISOString().slice(0, 10);
       } else {
         currentFocus = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
       }
@@ -818,11 +829,11 @@
 
     function navigateSummary(offset) {
       if (currentView === 'daily') {
-        const dt = new Date(currentFocus);
+        const dt = parseDateLocal(currentFocus);
         dt.setDate(dt.getDate() + offset);
         currentFocus = dt.toISOString().slice(0, 10);
       } else if (currentView === 'weekly') {
-        const dt = new Date(currentFocus);
+        const dt = parseDateLocal(currentFocus);
         dt.setDate(dt.getDate() + offset * 7);
         currentFocus = dt.toISOString().slice(0, 10);
       } else {
@@ -858,12 +869,12 @@
       const noteFilter = document.getElementById("filterIncomeNote").value.toLowerCase();
 
       let filtered = entries.filter(e => {
-        const d = new Date(e.date);
+        const d = parseDateLocal(e.date);
         let matchDate = false;
         if (view === 'daily') {
-          matchDate = e.date === currentFocus;
+          matchDate = (e.date === currentFocus);
         } else if (view === 'weekly') {
-          const ws = new Date(currentFocus);
+          const ws = parseDateLocal(currentFocus);
           const we = new Date(ws);
           we.setDate(ws.getDate() + 6);
           matchDate = (d >= ws && d <= we);
@@ -888,7 +899,7 @@
       }
 
       if (view === 'daily') {
-        filtered.sort((a,b) => new Date(b.date) - new Date(a.date));
+        filtered.sort((a,b) => parseDateLocal(b.date) - parseDateLocal(a.date));
         filtered.forEach(e => {
           const idx = entries.findIndex(x => x === e);
           const paidIcon = e.paid ? "✅" : "🕒";
@@ -908,9 +919,9 @@
           dayMap[e.date].push(e);
         });
         Object.keys(dayMap)
-          .sort((a,b) => new Date(b) - new Date(a))
+          .sort((a,b) => parseDateLocal(b) - parseDateLocal(a))
           .forEach(dayKey => {
-            const dayEntries = dayMap[dayKey].slice().sort((a,b) => new Date(b.date) - new Date(a.date));
+            const dayEntries = dayMap[dayKey].slice().sort((a,b) => parseDateLocal(b.date) - parseDateLocal(a.date));
             const dayTotal = dayEntries.reduce((sum, e) => sum + e.amount, 0).toFixed(2);
             container.innerHTML += `
               <div class="bg-gray-700 p-2 rounded mb-2">
@@ -932,14 +943,15 @@
       } else {
         const weekMap = {};
         filtered.forEach(e => {
-          const d = new Date(e.date);
-          const weekNum = Math.floor((d.getDate() - 1) / 7) + 1;
+          const d = parseDateLocal(e.date);
+          const dayNum = d.getDate();
+          const weekNum = Math.floor((dayNum - 1) / 7) + 1;
           const wkKey = `Week ${weekNum}`;
           if (!weekMap[wkKey]) weekMap[wkKey] = [];
           weekMap[wkKey].push(e);
         });
         Object.keys(weekMap).forEach(wkKey => {
-          const weekEntries = weekMap[wkKey].slice().sort((a,b) => new Date(b.date) - new Date(a.date));
+          const weekEntries = weekMap[wkKey].slice().sort((a,b) => parseDateLocal(b.date) - parseDateLocal(a.date));
           const weekTotal = weekEntries.reduce((sum, e) => sum + e.amount, 0).toFixed(2);
           container.innerHTML += `
             <div class="bg-gray-700 p-2 rounded mb-2">
@@ -968,12 +980,12 @@
       const noteFilter = document.getElementById("filterExpenseNote").value.toLowerCase();
 
       let filtered = entriesExp.filter(e => {
-        const d = new Date(e.date);
+        const d = parseDateLocal(e.date);
         let matchDate = false;
         if (view === 'daily') {
-          matchDate = e.date === currentFocus;
+          matchDate = (e.date === currentFocus);
         } else if (view === 'weekly') {
-          const ws = new Date(currentFocus);
+          const ws = parseDateLocal(currentFocus);
           const we = new Date(ws);
           we.setDate(ws.getDate() + 6);
           matchDate = (d >= ws && d <= we);
@@ -997,7 +1009,7 @@
       }
 
       if (view === 'daily') {
-        filtered.sort((a,b) => new Date(b.date) - new Date(a.date));
+        filtered.sort((a,b) => parseDateLocal(b.date) - parseDateLocal(a.date));
         filtered.forEach(e => {
           const idx = entriesExp.findIndex(x => x === e);
           container.innerHTML += `
@@ -1015,9 +1027,9 @@
           dayMap[e.date].push(e);
         });
         Object.keys(dayMap)
-          .sort((a,b) => new Date(b) - new Date(a))
+          .sort((a,b) => parseDateLocal(b) - parseDateLocal(a))
           .forEach(dayKey => {
-            const dayEntries = dayMap[dayKey].slice().sort((a,b) => new Date(b.date) - new Date(a.date));
+            const dayEntries = dayMap[dayKey].slice().sort((a,b) => parseDateLocal(b.date) - parseDateLocal(a.date));
             const dayTotal = dayEntries.reduce((sum, e) => sum + e.amount, 0).toFixed(2);
             container.innerHTML += `
               <div class="bg-gray-700 p-2 rounded mb-2">
@@ -1037,14 +1049,15 @@
       } else {
         const weekMap = {};
         filtered.forEach(e => {
-          const d = new Date(e.date);
-          const weekNum = Math.floor((d.getDate() - 1) / 7) + 1;
+          const d = parseDateLocal(e.date);
+          const dayNum = d.getDate();
+          const weekNum = Math.floor((dayNum - 1) / 7) + 1;
           const wkKey = `Week ${weekNum}`;
           if (!weekMap[wkKey]) weekMap[wkKey] = [];
           weekMap[wkKey].push(e);
         });
         Object.keys(weekMap).forEach(wkKey => {
-          const weekEntries = weekMap[wkKey].slice().sort((a,b) => new Date(b.date) - new Date(a.date));
+          const weekEntries = weekMap[wkKey].slice().sort((a,b) => parseDateLocal(b.date) - parseDateLocal(a.date));
           const weekTotal = weekEntries.reduce((sum, e) => sum + e.amount, 0).toFixed(2);
           container.innerHTML += `
             <div class="bg-gray-700 p-2 rounded mb-2">
@@ -1075,26 +1088,26 @@
         expenseList = entriesExp.filter(e => e.date === currentFocus);
         label.textContent = `${formatDate(currentFocus)}`;
       } else if (view === 'weekly') {
-        const ws = new Date(currentFocus);
+        const ws = parseDateLocal(currentFocus);
         const we = new Date(ws);
         we.setDate(ws.getDate() + 6);
         incomeList = entries.filter(e => {
-          const d = new Date(e.date);
+          const d = parseDateLocal(e.date);
           return d >= ws && d <= we;
         });
         expenseList = entriesExp.filter(e => {
-          const d = new Date(e.date);
+          const d = parseDateLocal(e.date);
           return d >= ws && d <= we;
         });
-        label.textContent = `Week: ${formatDate(ws.toISOString().slice(0, 10))} – ${formatDate(we.toISOString().slice(0,10))}`;
+        label.textContent = `Week: ${formatDate(currentFocus)} – ${formatDate(we.toISOString().slice(0,10))}`;
       } else {
         const [y, m] = currentFocus.split('-').map(Number);
         incomeList = entries.filter(e => {
-          const d = new Date(e.date);
+          const d = parseDateLocal(e.date);
           return d.getFullYear() === y && d.getMonth() + 1 === m;
         });
         expenseList = entriesExp.filter(e => {
-          const d = new Date(e.date);
+          const d = parseDateLocal(e.date);
           return d.getFullYear() === y && d.getMonth() + 1 === m;
         });
         const monthName = new Date(y, m - 1).toLocaleString('default', { month: 'long' });
@@ -1142,7 +1155,7 @@
     }
 
     // ----------------------------------------------------------------
-    // 8) EDIT MODAL LOGIC (INCOME ONLY)
+    // 9) EDIT MODAL LOGIC (INCOME ONLY)
     // ----------------------------------------------------------------
 
     function openEditModal(index) {
@@ -1190,7 +1203,7 @@
     }
 
     // ----------------------------------------------------------------
-    // 9) INITIALIZE
+    // 10) INITIALIZE
     // ----------------------------------------------------------------
 
     window.addEventListener("DOMContentLoaded", () => {
