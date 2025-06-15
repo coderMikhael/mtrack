@@ -6,61 +6,109 @@
   <meta name="theme-color" content="#111827" />
   <title>Money Tracker (Neon Cars)</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    /* Gamified Dark Theme */
+<style>
+    /* ===============================
+      🎨 THEME CONFIG (editable block)
+      =============================== */
     :root {
-      --color-bg: #111827;         /* Dark Indigo-900 */
-      --color-surface: #1f2937;    /* Dark Gray-800 */
-      --color-text: #f9fafb;       /* Gray-50 */
-      --color-primary: #0ea5e9;    /* Neon Blue */
-      --color-secondary: #22c55e;  /* Neon Green */
-      --color-accent: #f472b6;     /* Neon Pink */
-      --color-muted: #6b7280;      /* Gray-500 */
-      --color-danger: #ef4444;     /* Red-500 */
+      /* Theme: Neon Dark */
+      
+      /* Backgrounds */
+      --color-bg: #111827;            /* App background */
+      --color-surface: #1f2937;       /* Card/modals background */
+
+      /* Typography */
+      --font-main: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      --color-text: #ffffff;          /* Main white text */
+      --color-text-soft: #e5e7eb;     /* For paragraphs */
+      --color-muted: #9ca3af;         /* Labels, placeholders */
+
+      /* Main Theme Colors */
+      --color-primary: #0ea5e9;       /* Neon Blue (info) */
+      --color-secondary: #22c55e;     /* Neon Green (success) */
+      --color-accent: #f472b6;        /* Neon Pink (highlight) */
+
+      /* Status Colors */
+      --color-danger: #ef4444;        /* Red - error */
+      --color-warning: #facc15;       /* Amber - warning */
+      --color-info: #38bdf8;          /* Sky Blue - info */
+      --color-ghost: #94a3b8;         /* Neutral gray */
     }
+    
+ /* this is theme Retro uncomment this block to apply. Dont forget to comment current theme. */
+/* :root {
+  --color-bg: #000000;
+  --color-surface: #0a0a0a;
+  --color-text: #00ff00;
+  --color-text-soft: #33ff33;
+  --color-primary: #00cc00;
+  --color-secondary: #33ff33;
+  --color-accent: #66ff66;
+  --color-muted: #007700;
+  --color-danger: #ff4444;
+  --font-main: 'Courier New', monospace;
+} */
+ /* this is theme Spring uncomment this block to apply. Dont forget to comment current theme. */
+/* :root {
+  --color-bg: #f0fdf4;
+  --color-surface: #d1fae5;
+  --color-text: #064e3b;
+  --color-text-soft: #047857;
+  --color-primary: #10b981;    
+  --color-secondary: #6ee7b7;  
+  --color-accent: #22d3ee;     
+  --color-muted: #6b7280;
+  --color-danger: #f87171;
+  --font-main: 'Poppins', sans-serif;
+} */
+
+
+
+    /* ===============================
+      🧱 GLOBAL BODY
+      =============================== */
     body {
       background-color: var(--color-bg);
       color: var(--color-text);
+      font-family: var(--font-main);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
-    /* Button Variants */
+
+    /* ===============================
+      🧲 BUTTON STYLES
+      =============================== */
     .btn-primary {
       background-color: var(--color-primary);
       color: white;
-      box-shadow: 0 0 8px var(--color-primary), 0 0 16px var(--color-primary), inset 0 0 6px var(--color-primary);
+      box-shadow: 0 0 8px var(--color-primary),
+                  0 0 16px var(--color-primary),
+                  inset 0 0 6px var(--color-primary);
     }
+
     .btn-secondary {
       background-color: var(--color-secondary);
       color: white;
-      box-shadow: 0 0 8px var(--color-secondary), 0 0 16px var(--color-secondary), inset 0 0 6px var(--color-secondary);
+      box-shadow: 0 0 8px var(--color-secondary),
+                  0 0 16px var(--color-secondary),
+                  inset 0 0 6px var(--color-secondary);
     }
+
     .btn-accent {
       background-color: var(--color-accent);
       color: white;
-      box-shadow: 0 0 8px var(--color-accent), 0 0 16px var(--color-accent), inset 0 0 6px var(--color-accent);
+      box-shadow: 0 0 8px var(--color-accent),
+                  0 0 16px var(--color-accent),
+                  inset 0 0 6px var(--color-accent);
     }
+
     .btn-delete {
       color: var(--color-danger);
     }
-    /* Bars: neon glow */
-    .bar-income {
-      background-color: var(--color-secondary);
-      box-shadow: 0 0 8px var(--color-secondary), 0 0 16px var(--color-secondary), inset 0 0 6px var(--color-secondary);
-      height: 100%;
-      border-radius: 0.25rem;
-    }
-    .bar-income-overflow {
-      background-color: var(--color-accent);
-      box-shadow: 0 0 8px var(--color-accent), 0 0 16px var(--color-accent), inset 0 0 6px var(--color-accent);
-      height: 100%;
-      border-radius: 0.25rem;
-    }
-    .bar-expense {
-      background-color: var(--color-primary);
-      box-shadow: 0 0 8px var(--color-primary), 0 0 16px var(--color-primary), inset 0 0 6px var(--color-primary);
-      height: 100%;
-      border-radius: 0.25rem;
-    }
-    /* Dark track behind the neon fill */
+
+    /* ===============================
+      📊 PROGRESS BAR STYLES
+      =============================== */
     .bar-track {
       background-color: var(--color-surface);
       border-radius: 0.25rem;
@@ -68,49 +116,96 @@
       position: relative;
       overflow: hidden;
     }
-    /* Finish line icon */
+
+    .bar-income {
+      background-color: var(--color-secondary);
+      box-shadow: 0 0 8px var(--color-secondary),
+                  0 0 16px var(--color-secondary),
+                  inset 0 0 6px var(--color-secondary);
+      height: 100%;
+      border-radius: 0.25rem;
+    }
+
+    .bar-income-overflow {
+      background-color: var(--color-accent);
+      box-shadow: 0 0 8px var(--color-accent),
+                  0 0 16px var(--color-accent),
+                  inset 0 0 6px var(--color-accent);
+      height: 100%;
+      border-radius: 0.25rem;
+    }
+
+    .bar-expense {
+      background-color: var(--color-primary);
+      box-shadow: 0 0 8px var(--color-primary),
+                  0 0 16px var(--color-primary),
+                  inset 0 0 6px var(--color-primary);
+      height: 100%;
+      border-radius: 0.25rem;
+    }
+
+    /* ===============================
+      🚗 ICONS ON BARS
+      =============================== */
+    .car-icon {
+      position: absolute;
+      top: -0.75rem;
+      font-size: 1.5rem;
+      transition: left 0.6s ease-out;
+      text-shadow: 0 0 4px #fbbf24,
+                  0 0 8px #fbbf24;
+    }
+
     .finish-line {
       position: absolute;
       right: -0.75rem;
       top: -0.25rem;
       font-size: 1rem;
-      text-shadow: 0 0 4px #fbbf24, 0 0 8px #fbbf24;
+      text-shadow: 0 0 4px #fbbf24,
+                  0 0 8px #fbbf24;
     }
-    /* Car icon */
-    .car-icon {
-      position: absolute;
-      top: -0.75rem; /* lift it above the bar */
-      font-size: 1.5rem;
-      transition: left 0.6s ease-out;
-      text-shadow: 0 0 4px #fbbf24, 0 0 8px #fbbf24;
-    }
-    /* Surface backgrounds */
+
+    /* ===============================
+      🧾 SURFACE ELEMENTS (cards, etc)
+      =============================== */
     .card {
       background-color: var(--color-surface);
     }
-    /* Text muted */
+
+    /* ===============================
+      ✏️ TEXT AND LABEL COLORS
+      =============================== */
     .text-muted {
       color: var(--color-muted);
     }
-    /* Input fields */
+
+    /* ===============================
+      🔢 INPUT STYLING
+      =============================== */
     input,
     select {
-      background-color: #374151; /* gray-700 */
+      background-color: #374151; /* Gray-700 */
       color: white;
-      border-color: #4b5563; /* gray-600 */
+      border-color: #4b5563;     /* Gray-600 */
     }
+
     input::placeholder {
       color: var(--color-muted);
     }
-    /* Scrollbar styling */
+
+    /* ===============================
+      🖱️ SCROLLBAR STYLE
+      =============================== */
     ::-webkit-scrollbar {
       width: 8px;
     }
+
     ::-webkit-scrollbar-thumb {
       background-color: var(--color-muted);
       border-radius: 4px;
     }
   </style>
+
 </head>
 <body class="flex flex-col min-h-screen">
 
@@ -135,14 +230,22 @@
         <button onclick="setTargetView('monthly')" id="monthlyBtn" class="px-4 py-1 rounded-full text-sm bg-gray-700 text-gray-300">Monthly</button>
       </div>
       <h2 class="text-lg font-semibold">Income Targets</h2>
+      <div class="relative flex justify-center items-center gap-4 mb-2">
+        <button onclick="navigateDashboard(-1)" class="absolute left-0 text-2xl text-gray-400 hover:text-white">&larr;</button>
+        <span id="dashboardCurrentLabel" class="font-semibold"></span>
+        <button onclick="navigateDashboard(1)" class="absolute right-0 text-2xl text-gray-400 hover:text-white">&rarr;</button>
+      </div>
+
       <div id="progressBars" class="space-y-4"></div>
     </div>
 
     <!-- Expense Section -->
-    <div class="mt-8 space-y-4">
-      <h2 class="text-lg font-semibold">Expenses</h2>
-      <div id="expenseBars" class="space-y-4"></div>
+    <div class="mt-12 space-y-4">
+      <div class="h-2 bg-gradient-to-r from-orange-400 via-white-500 via-blue-500 via-white-500 to-green-500 rounded shadow-md"></div>
+      <h2 class="text-xl font-semibold text-center tracking-wide text-white">Expenses</h2>
+      <div id="expenseListSimple" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
     </div>
+
   </main>
 
   <!-- Floating Add Income Button -->
@@ -169,11 +272,12 @@
       <button onclick="toggleExpenseForm()" class="absolute top-2 right-2 text-gray-400 hover:text-white text-xl leading-none">&times;</button>
       <h2 class="text-lg font-semibold">Add Expense</h2>
       <div id="expenseEntrySection" class="space-y-4"></div>
+      <button onclick="toggleExpenseCategoryEditor()" class="w-full bg-gray-600 text-white py-2 rounded text-sm hover:bg-gray-500">✏️ Edit Categories</button>
       <button onclick="toggleExpenseForm()" class="w-full btn-accent py-2 rounded text-white">Close</button>
     </div>
   </div>
 
-  <!-- Category Editor Modal -->
+  <!-- Income Category Editor Modal -->
   <div id="categoryModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-10">
     <div class="card p-6 rounded-xl w-[90%] max-w-md space-y-4 max-h-[90vh] overflow-y-auto relative">
       <!-- Close icon -->
@@ -186,6 +290,19 @@
         <button onclick="addCategory()" class="btn-secondary px-3 rounded">Add</button>
       </div>
       <button onclick="toggleCategoryEditor()" class="w-full btn-accent py-2 rounded text-white">Close</button>
+    </div>
+  </div>
+  <!-- Expense Category Editor Modal -->
+  <div id="expenseCategoryModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-10">
+    <div class="card p-6 rounded-xl w-[90%] max-w-md space-y-4 max-h-[90vh] overflow-y-auto relative">
+      <button onclick="toggleExpenseCategoryEditor()" class="absolute top-2 right-2 text-gray-400 hover:text-white text-xl leading-none">&times;</button>
+      <h2 class="text-lg font-semibold">Edit Expense Categories</h2>
+      <ul id="expenseCategoryList" class="space-y-2"></ul>
+      <div class="flex space-x-2">
+        <input id="newExpCatName" placeholder="New Category" class="flex-1 border p-2 rounded text-white" />
+        <button onclick="addExpenseCategory()" class="btn-accent px-3 rounded">Add</button>
+      </div>
+      <button onclick="toggleExpenseCategoryEditor()" class="w-full btn-accent py-2 rounded text-white">Close</button>
     </div>
   </div>
 
@@ -366,7 +483,7 @@
 
     let CATEGORIES = {};           // { "Rides+":150, "3Bros":550, "Misc":260, ... }
     let entries = [];              // [ { category, amount, date, paid, note }, ... ]
-    const EXP_CATEGORIES = ["Groceries", "Fuel", "Utilities", "Insurance", "Rent", "Interest", "Other"];
+    let EXP_CATEGORIES = ["Groceries", "Fuel", "Utilities", "Insurance", "Rent", "Interest", "Other"];
     let entriesExp = [];           // [ { category, amount, date, paidBy, note }, ... ]
 
     const formStates = {};
@@ -422,6 +539,8 @@
     function initFocus() {
       const today = new Date();
       currentFocus = toYYYYMMDD(today);
+      renderBars();
+      renderExpenseBars();
     }
     initFocus();
 
@@ -782,6 +901,18 @@
     // ----------------------------------------------------------------
 
     function renderBars() {
+      const label = document.getElementById("dashboardCurrentLabel");
+      if (targetView === 'weekly') {
+        const ws = parseDateLocal(currentFocus);
+        const we = new Date(ws);
+        we.setDate(ws.getDate() + 6);
+        label.textContent = `Week: ${formatDate(currentFocus)} – ${formatDate(toYYYYMMDD(we))}`;
+      } else {
+        const [y, m] = currentFocus.split('-').map(Number);
+        const monthName = new Date(y, m - 1).toLocaleString('default', { month: 'long' });
+        label.textContent = `${monthName} ${y}`;
+      }
+
       const container = document.getElementById("progressBars");
       container.innerHTML = "";
 
@@ -789,7 +920,23 @@
         const baseGoal = CATEGORIES[cat];
         const target = (targetView === 'monthly') ? (baseGoal * 4) : baseGoal;
         let total = 0;
-        entries.forEach(e => { if (e.category === cat) total += e.amount; });
+       // entries.forEach(e => { if (e.category === cat) total += e.amount; }); (this block was not resetting dashboard every week.)
+        entries.forEach(e => {
+          if (e.category !== cat) return;
+
+          const d = parseDateLocal(e.date);
+
+          if (targetView === 'weekly') {
+            const ws = parseDateLocal(currentFocus);
+            const we = new Date(ws);
+            we.setDate(ws.getDate() + 6);
+            if (d >= ws && d <= we) total += e.amount;
+          } else {
+            const [y, m] = currentFocus.split('-').map(Number);
+            if (d.getFullYear() === y && (d.getMonth() + 1) === m) total += e.amount;
+          }
+        });
+
         const overflow = total > target;
         const percent = Math.min((total / target) * 100, 100);
         const fillClass = overflow ? "bar-income-overflow" : "bar-income";
@@ -800,7 +947,7 @@
           <div class="mb-4">
             <div class="flex justify-between items-center mb-1">
               <span class="font-medium">${cat}</span>
-              <span class="text-sm text-muted">$${total.toFixed(2)} / $${target}</span>
+              <span class="text-sm font-semibold text-white tracking-tight">$${total.toFixed(2)} / $${target}</span>
             </div>
             <div class="bar-track rounded-full">
               <div class="${fillClass}" style="width: ${percent}%;"></div>
@@ -810,35 +957,57 @@
           </div>`;
       });
     }
-
     function renderExpenseBars() {
-      const container = document.getElementById("expenseBars");
-      container.innerHTML = "";
+      const container = document.getElementById("expenseListSimple");
+      if (!container) return; // 👈 avoids errors if container doesn't exist
+      container.innerHTML ="";
+
       const totals = {};
       EXP_CATEGORIES.forEach(c => totals[c] = 0);
-      entriesExp.forEach(e => { if (totals[e.category] !== undefined) totals[e.category] += e.amount; });
-      const maxTotal = Math.max(...Object.values(totals), 1);
+      entriesExp.forEach(e => {
+        if (totals[e.category] !== undefined) totals[e.category] += e.amount;
+      });
 
       EXP_CATEGORIES.forEach(cat => {
         const total = totals[cat];
-        const percent = (total / maxTotal) * 100;
-        const expenseIcon = EXPENSE_ICONS[cat] || "💵";
-        const iconLeft = `calc(${percent}% - 0.75rem)`;
-
         container.innerHTML += `
-          <div class="mb-4">
-            <div class="flex justify-between items-center mb-1">
-              <span class="font-medium">${cat}</span>
-              <span class="text-sm text-muted">$${total.toFixed(2)}</span>
-            </div>
-            <div class="bar-track rounded-full">
-              <div class="bar-expense" style="width: ${percent}%;"></div>
-              <div class="car-icon" style="left: ${iconLeft};">${expenseIcon}</div>
-              <div class="finish-line">🏁</div>
-            </div>
-          </div>`;
+          <div class="card p-4 flex justify-between items-center rounded shadow">
+            <span class="font-medium">${cat}</span>
+            <span class="text-sm font-semibold text-white tracking-tight">$${total.toFixed(2)}</span>
+          </div>
+        `;
       });
     }
+
+
+    // function renderExpenseBars() {
+    //   const container = document.getElementById("expenseBars");
+    //   container.innerHTML = "";
+    //   const totals = {};
+    //   EXP_CATEGORIES.forEach(c => totals[c] = 0);
+    //   entriesExp.forEach(e => { if (totals[e.category] !== undefined) totals[e.category] += e.amount; });
+    //   const maxTotal = Math.max(...Object.values(totals), 1);
+
+    //   EXP_CATEGORIES.forEach(cat => {
+    //     const total = totals[cat];
+    //     const percent = (total / maxTotal) * 100;
+    //     const expenseIcon = EXPENSE_ICONS[cat] || "💵";
+    //     const iconLeft = `calc(${percent}% - 0.75rem)`;
+
+    //     container.innerHTML += `
+    //       <div class="mb-4">
+    //         <div class="flex justify-between items-center mb-1">
+    //           <span class="font-medium">${cat}</span>
+    //           <span class="text-sm text-muted">$${total.toFixed(2)}</span>
+    //         </div>
+    //         <div class="bar-track rounded-full">
+    //           <div class="bar-expense" style="width: ${percent}%;"></div>
+    //           <div class="car-icon" style="left: ${iconLeft};">${expenseIcon}</div>
+    //           <div class="finish-line">🏁</div>
+    //         </div>
+    //       </div>`;
+    //   });
+    // }
 
     // ----------------------------------------------------------------
     // 8) SUMMARY PAGE LOGIC (TOTALS + BREAKDOWNS + ENTRIES LISTS)
@@ -900,6 +1069,22 @@
       renderExpenseEntries();
       renderSummary();
     }
+    function navigateDashboard(offset) {
+      if (targetView === 'weekly') {
+        const dt = parseDateLocal(currentFocus);
+        dt.setDate(dt.getDate() + offset * 7);
+        currentFocus = toYYYYMMDD(dt);
+      } else {
+        const [y, m] = currentFocus.split('-').map(Number);
+        let newMonth = m - 1 + offset;
+        let newYear = y;
+        if (newMonth < 0) { newMonth = 11; newYear--; }
+        if (newMonth > 11) { newMonth = 0; newYear++; }
+        currentFocus = `${newYear}-${String(newMonth + 1).padStart(2, "0")}`;
+      }
+      renderBars();
+    }
+
 
     function renderFilters() {
       const fIncCat = document.getElementById("filterIncomeCategory");
@@ -1395,6 +1580,67 @@
       selectedExpenseIndices.clear();
       renderIncomeEntries();
       renderExpenseEntries();
+    }
+    function toggleExpenseCategoryEditor() {
+      const modal = document.getElementById("expenseCategoryModal");
+      modal.classList.toggle("hidden");
+      if (!modal.classList.contains("hidden")) renderExpenseCategoryList();
+    }
+
+    function renderExpenseCategoryList() {
+      const list = document.getElementById("expenseCategoryList");
+      list.innerHTML = "";
+      EXP_CATEGORIES.forEach((cat, idx) => {
+        list.innerHTML += `
+          <li class="flex items-center space-x-2">
+            <input class="border p-1 flex-1 rounded text-white" value="${cat}" onchange="renameExpenseCategory(${idx}, this.value)" />
+            <button onclick="deleteExpenseCategory(${idx})" class="btn-delete text-xs">Delete</button>
+          </li>
+        `;
+      });
+    }
+
+    function addExpenseCategory() {
+      const name = document.getElementById("newExpCatName").value.trim();
+      if (!name) return alert("Enter a valid category name.");
+      if (EXP_CATEGORIES.includes(name)) return alert("Category already exists.");
+      EXP_CATEGORIES.push(name);
+      document.getElementById("newExpCatName").value = "";
+      renderExpenseCategoryList();
+      renderExpenseEntrySection();
+      renderExpenseBars();
+      renderFilters();
+      renderExpenseEntries();
+      renderSummary();
+      writeDataFile();
+    }
+
+    function renameExpenseCategory(index, newName) {
+      if (!newName || EXP_CATEGORIES.includes(newName)) {
+        renderExpenseCategoryList();
+        return alert("Invalid or duplicate name.");
+      }
+      EXP_CATEGORIES[index] = newName;
+      renderExpenseCategoryList();
+      renderExpenseEntrySection();
+      renderExpenseBars();
+      renderFilters();
+      renderExpenseEntries();
+      renderSummary();
+      writeDataFile();
+    }
+
+    function deleteExpenseCategory(index) {
+      const cat = EXP_CATEGORIES[index];
+      if (!confirm(`Delete category "${cat}"? This won’t remove past entries.`)) return;
+      EXP_CATEGORIES.splice(index, 1);
+      renderExpenseCategoryList();
+      renderExpenseEntrySection();
+      renderExpenseBars();
+      renderFilters();
+      renderExpenseEntries();
+      renderSummary();
+      writeDataFile();
     }
 
     // ----------------------------------------------------------------
